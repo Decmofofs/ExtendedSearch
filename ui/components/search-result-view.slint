@@ -30,51 +30,56 @@ component ResultItem {
                 width: parent.width;
                 height: parent.height;
                 
-                // 整行的单击选择
-                clicked => {
-                    root.selected_changed(!file.selected);
-                }
+                // // 整行的单击选择
+                // clicked => {
+                //     root.selected_changed(!file.selected);
+                // }
                 
                 // 双击打开文件夹
                 double-clicked => {
                     root.double_clicked();
+                }            }
+            
+            // 复选框 - 覆盖在左边区域
+            checkbox := Rectangle {
+                x: 8px; // 左边距，与 HorizontalLayout 的 padding 对齐 
+                // 手动微调所在位置,使得它覆盖下面的行，从而不影响双击事件触发.
+                
+                width: 24px;
+                height: 24px;
+                border-radius: 4px;
+                border-color: checkbox-touch.has-hover || file.selected ? #007bff : #aaa;
+                border-width: 1px;
+                background: file.selected ? #007bff : white;
+                
+                // 复选框勾选标记（使用更好看的Unicode符号）
+                Text {
+                    text: "✓";
+                    color: white;
+                    font-size: 16px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    visible: file.selected;
+                }
+                
+                // 复选框点击区域（最高层级）
+                checkbox-touch := TouchArea {
+                    z: 2; // 确保复选框的触摸区域在最上层
+                    clicked => {
+                        // 停止事件传播，阻止行点击事件触发
+                        root.selected_changed(!file.selected);
+                    }
                 }
             }
             
             HorizontalLayout {
                 z: 1; // 内容在触摸区域之上
+                x: 32px; // 手动微调
                 width: 100%;
                 padding: 8px;
                 spacing: 10px;
                 
-                // 复选框
-                checkbox := Rectangle {
-                    width: 24px;
-                    height: 24px;
-                    border-radius: 4px;
-                    border-color: checkbox-touch.has-hover || file.selected ? #007bff : #aaa;
-                    border-width: 1px;
-                    background: file.selected ? #007bff : white;
-                    
-                    // 复选框勾选标记（使用更好看的Unicode符号）
-                    Text {
-                        text: "✓";
-                        color: white;
-                        font-size: 16px;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                        visible: file.selected;
-                    }
-                    
-                    // 复选框点击区域（最高层级）
-                    checkbox-touch := TouchArea {
-                        z: 2; // 确保复选框的触摸区域在最上层
-                        clicked => {
-                            // 停止事件传播，阻止行点击事件触发
-                            root.selected_changed(!file.selected);
-                        }
-                    }
-                }
+
                 
                 // 文件名
                 Text {
