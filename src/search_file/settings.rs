@@ -176,6 +176,10 @@ pub fn add_type1_timelimit(num : u64, unit: &str,newer: bool) {
 
 // 传入修改日期 下限的年月日 + 上限的年月日
 pub fn add_type2_timelimit(minimum_year: i32, minimum_month: u32, minimum_day: u32, maximum_year: i32, maximum_month: u32, maximum_day: u32) {
+    println!("设置日期范围限制: 从 {}/{}/{} 到 {}/{}/{}", 
+        minimum_year, minimum_month, minimum_day, 
+        maximum_year, maximum_month, maximum_day);
+    
     let minimum_date = NaiveDate::from_ymd_opt(minimum_year, minimum_month, minimum_day);
     let maximum_date = NaiveDate::from_ymd_opt(maximum_year, maximum_month, maximum_day);
 
@@ -183,14 +187,20 @@ pub fn add_type2_timelimit(minimum_year: i32, minimum_month: u32, minimum_day: u
         
         let minimum_timestamp = min_date.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp() as u64;
         let maximum_timestamp = max_date.and_hms_opt(23, 59, 59).unwrap().and_utc().timestamp() as u64;
+        
+        println!("转换为时间戳: 最小值={}, 最大值={}", minimum_timestamp, maximum_timestamp);
+        
         unsafe {
             SEARCH_TIMELIMIT = true;
             SEARCH_TIMELIMIT_CURRENTTIME_TYPE = false;
             SEARCH_MODIFY_TIME_MINIMUM_LIMIT = minimum_timestamp;
             SEARCH_MODIFY_TIME_MAXIMUM_LIMIT = maximum_timestamp;
+            
+            // println!("日期限制参数设置完成: SEARCH_TIMELIMIT={}, SEARCH_TIMELIMIT_CURRENTTIME_TYPE={}, 最小时间={}, 最大时间={}", 
+            //     SEARCH_TIMELIMIT, SEARCH_TIMELIMIT_CURRENTTIME_TYPE, SEARCH_MODIFY_TIME_MINIMUM_LIMIT, SEARCH_MODIFY_TIME_MAXIMUM_LIMIT);
         }
     } else {
-        eprintln!("Invalid date input: minimum ({}, {}, {}), maximum ({}, {}, {})",
+        eprintln!("无效的日期输入: 最小日期({}, {}, {}), 最大日期({}, {}, {})",
             minimum_year, minimum_month, minimum_day,
             maximum_year, maximum_month, maximum_day);
     }

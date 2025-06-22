@@ -243,7 +243,8 @@ export component FilterSettings {
                             Text {
                                 text: "限制类型:";
                                 vertical-alignment: center;
-                            }                            date_limit_combo := ComboBox {
+                            }                            
+                            date_limit_combo := ComboBox {
                                 model: ["无限制", "天内", "周内", "年内", "具体日期"];
                                 current-index: root.date_limit_type;
                                 selected(index) => {

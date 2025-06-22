@@ -32,38 +32,42 @@ impl SearchHelper {
         settings::modify_regex_contain_path(match filter.regex_target {
             crate::filter::RegexTarget::FileName => false,
             crate::filter::RegexTarget::FilePath => true,
-        });
-        
-        // 时间限制设置
+        });        // 时间限制设置
         match &filter.date_limit {
             crate::filter::DateLimitType::None => {
                 // 取消时间限制
                 settings::cancel_file_timelimit();
             },
-            crate::filter::DateLimitType::Days(days) => {
+            crate::filter::DateLimitType::Days(days, whether_new) => {
                 // 使用天数限制
-                settings::add_type1_timelimit(*days as u64, "day", true);
+                let unit = "day";
+                settings::add_type1_timelimit(*days as u64, unit, *whether_new);
             },
-            crate::filter::DateLimitType::Weeks(weeks) => {
+            crate::filter::DateLimitType::Weeks(weeks, whether_new) => {
                 // 使用周数限制
-                settings::add_type1_timelimit(*weeks as u64, "week", true);
+                let unit = "week";
+                settings::add_type1_timelimit(*weeks as u64, unit, *whether_new);
             },
-            crate::filter::DateLimitType::Years(years) => {
+            crate::filter::DateLimitType::Years(years, whether_new) => {
                 // 使用年数限制
-                settings::add_type1_timelimit(*years as u64, "year", true);
-            },
-            crate::filter::DateLimitType::Specific { year, month, day } => {
-                // 使用具体日期限制 - 从当前日期到指定日期
-                let today = chrono::Local::now().date_naive();
-                
-                // 使用add_type2_timelimit函数，指定日期范围
+                let unit = "year";
+                settings::add_type1_timelimit(*years as u64, unit, *whether_new);
+            },            crate::filter::DateLimitType::Specific { 
+                minimum_year, minimum_month, minimum_day,
+                maximum_year, maximum_month, maximum_day 
+            } => {
+                // 直接使用Specific中的起始和结束日期值
+                println!("使用完整日期范围筛选：从 {}/{}/{} 到 {}/{}/{}",
+                    minimum_year, minimum_month, minimum_day,
+                    maximum_year, maximum_month, maximum_day);
+                    
                 settings::add_type2_timelimit(
-                    today.year(), 
-                    today.month(), 
-                    today.day(),
-                    *year, 
-                    *month, 
-                    *day
+                    *minimum_year, 
+                    *minimum_month, 
+                    *minimum_day,
+                    *maximum_year, 
+                    *maximum_month, 
+                    *maximum_day
                 );
             },
         }

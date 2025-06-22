@@ -3,13 +3,13 @@ use std::rc::Rc;
 use std::path::PathBuf;
 use native_dialog::{FileDialog, MessageDialog, MessageType};
 use crate::filter::SearchFilter;
-use crate::search_file::{self, SingleFileInformations};
+use crate::search_file::SingleFileInformations;
 use crate::helper::SearchHelper;
 
 slint::include_modules!();
 
 // 搜索结果模型
-struct SearchResultModel {
+pub struct SearchResultModel {
     inner: Rc<VecModel<FileInfo>>,
 }
 
@@ -274,6 +274,25 @@ impl UIHandler {    /// 创建新的UI处理器
         println!("  搜索只读文件: {}", filter_data.search_readonly_files);
         println!("  文件大小范围: {} - {} MB", filter_data.min_file_size, filter_data.max_file_size);
         println!("  日期限制类型: {:?}", filter_data.date_limit_type);
+        
+        // 打印扩展的日期筛选信息
+        if filter_data.date_limit_type == DateLimitType::Specific {
+            println!("  起始日期: {}/{}/{}", filter_data.specific_year, filter_data.specific_month, filter_data.specific_day);
+            println!("  结束日期: {}/{}/{}", filter_data.end_year, filter_data.end_month, filter_data.end_day);
+        } else if filter_data.date_limit_type != DateLimitType::None {
+            println!("  时间值: {} 单位: {} 内/外: {}", 
+                filter_data.date_limit_value,
+                match filter_data.time_unit {
+                    0 => "天",
+                    1 => "周", 
+                    2 => "月",
+                    3 => "年",
+                    _ => "未知",
+                },
+                if filter_data.time_newer { "内" } else { "外" }
+            );
+        }
+        
         println!("  正则表达式: '{}'", filter_data.regex_pattern);
         println!("  正则匹配目标: {:?}", filter_data.regex_target);
         println!("  记录哈希值: {}", filter_data.record_hash);
@@ -290,10 +309,8 @@ impl UIHandler {    /// 创建新的UI处理器
         let regex_target = match filter_data.regex_target {
             RegexTarget::FileName => 0,
             RegexTarget::FilePath => 1,
-        };
-        
-        // 从UI数据创建搜索过滤器
-        match SearchFilter::from_ui_data(
+        };        // 直接调用修改后的SearchFilter::from_ui_data函数，传递所有参数
+        let filter_result = SearchFilter::from_ui_data(
             filter_data.search_hidden_files,
             filter_data.search_hidden_folders,
             filter_data.search_readonly_files,
@@ -307,7 +324,13 @@ impl UIHandler {    /// 创建新的UI处理器
             &filter_data.regex_pattern,
             regex_target,
             filter_data.record_hash,
-        ) {
+            filter_data.time_newer,  // 传入是否"内"/"外"参数
+            filter_data.end_year,    // 传入完整日期的结束年
+            filter_data.end_month,   // 传入完整日期的结束月
+            filter_data.end_day,     // 传入完整日期的结束日
+        );
+        
+        match filter_result {
             Ok(filter) => {
                 // 保存过滤器设置到UIHandler的状态中
                 *current_filter.borrow_mut() = filter.clone();
@@ -332,11 +355,9 @@ impl UIHandler {    /// 创建新的UI处理器
         self.ui.set_saved_filter_data(filter_data);
         println!("已将保存的过滤器设置同步到UI");
     }
-    
-    /// 获取用于UI初始化的过滤器数据
+      /// 获取用于UI初始化的过滤器数据
     pub fn get_filter_data_for_ui(&self) -> FilterData {
-        let filter = self.current_filter.borrow();
-        FilterData {
+        let filter = self.current_filter.borrow();        FilterData {
             search_hidden_files: filter.search_hidden_files,
             search_hidden_folders: filter.search_hidden_folders,
             search_readonly_files: filter.search_readonly_files,
@@ -344,29 +365,39 @@ impl UIHandler {    /// 创建新的UI处理器
             max_file_size: (filter.max_file_size / (1024 * 1024)) as i32, // 转换为MB
             date_limit_type: match filter.date_limit {
                 crate::filter::DateLimitType::None => DateLimitType::None,
-                crate::filter::DateLimitType::Days(_) => DateLimitType::Days,
-                crate::filter::DateLimitType::Weeks(_) => DateLimitType::Weeks,
-                crate::filter::DateLimitType::Years(_) => DateLimitType::Years,
+                crate::filter::DateLimitType::Days(..) => DateLimitType::Days,
+                crate::filter::DateLimitType::Weeks(..) => DateLimitType::Weeks,
+                crate::filter::DateLimitType::Years(..) => DateLimitType::Years,
                 crate::filter::DateLimitType::Specific { .. } => DateLimitType::Specific,
             },
             date_limit_value: match filter.date_limit {
-                crate::filter::DateLimitType::Days(v) => v,
-                crate::filter::DateLimitType::Weeks(v) => v,
-                crate::filter::DateLimitType::Years(v) => v,
+                crate::filter::DateLimitType::Days(v, _) => v,
+                crate::filter::DateLimitType::Weeks(v, _) => v,
+                crate::filter::DateLimitType::Years(v, _) => v,
                 _ => 1,
             },
+            // 基本日期设置 - 使用minimum_*字段
             specific_year: match filter.date_limit {
-                crate::filter::DateLimitType::Specific { year, .. } => year,
-                _ => 2024,
+                crate::filter::DateLimitType::Specific { minimum_year, .. } => minimum_year,
+                _ => filter.start_year.unwrap_or(2024),
             },
             specific_month: match filter.date_limit {
-                crate::filter::DateLimitType::Specific { month, .. } => month as i32,
-                _ => 1,
+                crate::filter::DateLimitType::Specific { minimum_month, .. } => minimum_month as i32,
+                _ => filter.start_month.unwrap_or(1),
             },
             specific_day: match filter.date_limit {
-                crate::filter::DateLimitType::Specific { day, .. } => day as i32,
-                _ => 1,
+                crate::filter::DateLimitType::Specific { minimum_day, .. } => minimum_day as i32,
+                _ => filter.start_day.unwrap_or(1),
             },
+            // specific_* 已经设置过了，这里只需要设置end_*
+            end_year: 2025,
+            end_month: 6,
+            end_day: 22,
+              // 快速选择设置 - 使用默认值
+            time_unit: 0, // 默认为"天"
+            time_newer: true, // 默认为"内"
+            
+            // 其他设置
             regex_pattern: filter.regex_pattern.as_ref().map(|r| r.as_str()).unwrap_or("").to_string().into(),
             regex_target: match filter.regex_target {
                 crate::filter::RegexTarget::FileName => RegexTarget::FileName,
@@ -382,10 +413,9 @@ impl UIHandler {    /// 创建新的UI处理器
         let directories = self.directories.clone();
         let current_filter = self.current_filter.clone();
         let search_results = self.search_results.inner.clone();
-        
-        // 1. 搜索按钮回调
+          // 1. 搜索按钮回调
         let search_callback = move || {
-            if let Some(ui) = ui_weak.upgrade() {
+            if let Some(_ui) = ui_weak.upgrade() {
                 // 获取要搜索的目录
                 let mut paths: Vec<PathBuf> = Vec::new();
                 for i in 0..directories.row_count() {

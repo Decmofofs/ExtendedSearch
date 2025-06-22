@@ -35,9 +35,20 @@ export struct FilterData {
     // 日期限制
     date_limit_type: DateLimitType,
     date_limit_value: int,  // 具体数值（天数/周数/年数）
+    
+    // 完整日期 - 起始日期
     specific_year: int,
     specific_month: int,
     specific_day: int,
+    
+    // 完整日期 - 结束日期
+    end_year: int,
+    end_month: int,
+    end_day: int,
+    
+    // 快速选择模式相关
+    time_unit: int,     // 0=day, 1=week, 2=month, 3=year
+    time_newer: bool,   // true=内, false=外
     
     // 正则表达式
     regex_pattern: string,
@@ -59,15 +70,29 @@ export component FilterSettingsOptimized {
     
     // 文件大小限制属性
     in-out property<int> min_file_size: 0;
-    in-out property<int> max_file_size: 65536; // 64MB
-      // 日期限制属性
+    in-out property<int> max_file_size: 65536; // 64MB    // 日期限制属性
     in-out property<int> date_limit_type: 0; // 0=None, 1=Days, 2=Weeks, 3=Years, 4=Specific
     in-out property<int> date_limit_value: 1;
+    
+    // 日期UI模式 - 0=无限制, 1=完整日期, 2=快速选择
+    in-out property<int> date_ui_mode: 0;
+    
+    // 扩展日期筛选 - 完整日期范围
+    in-out property<int> start_year: 2024;
+    in-out property<int> start_month: 1;
+    in-out property<int> start_day: 1;
+    in-out property<int> end_year: 2025;
+    in-out property<int> end_month: 6;
+    in-out property<int> end_day: 22;
+    
+    // 扩展日期筛选 - 快速选择
+    in-out property<int> time_value: 1;
+    in-out property<int> time_unit: 0; // 0=day, 1=week, 2=month, 3=year
+    in-out property<bool> time_newer: true; // true=内, false=外
+    
     in-out property<int> specific_year: 2025;
     in-out property<int> specific_month: 6;
     in-out property<int> specific_day: 22;
-      // 日期选择UI状态（与实际的date_limit_type分开）
-    property<int> date_ui_mode: 0; // 0=无限制, 1=输入完整日期, 2=快速选择
     
     // 强制重新渲染的标志
     property<int> date_render_key: 0;
@@ -84,8 +109,7 @@ export component FilterSettingsOptimized {
     
     // 回调函数
     callback filter_changed();
-    callback reset_to_defaults();
-      // 获取过滤数据的方法
+    callback reset_to_defaults();    // 获取过滤数据的方法
     public function get_filter_data() -> FilterData {
         return {
             search_hidden_files: root.search_hidden_files,
@@ -97,10 +121,18 @@ export component FilterSettingsOptimized {
                            root.date_limit_type == 1 ? DateLimitType.Days :
                            root.date_limit_type == 2 ? DateLimitType.Weeks :
                            root.date_limit_type == 3 ? DateLimitType.Years : DateLimitType.Specific,
-            date_limit_value: root.date_limit_value,
-            specific_year: root.specific_year,
-            specific_month: root.specific_month,
-            specific_day: root.specific_day,
+            date_limit_value: root.date_ui_mode == 2 ? root.time_value : root.date_limit_value, // 快速选择时使用time_value
+            // 完整日期范围时，用start_*和end_*替代specific_*
+            specific_year: root.date_ui_mode == 1 ? root.start_year : root.specific_year,
+            specific_month: root.date_ui_mode == 1 ? root.start_month : root.specific_month,
+            specific_day: root.date_ui_mode == 1 ? root.start_day : root.specific_day,
+            // 额外添加结束日期信息
+            end_year: root.end_year,
+            end_month: root.end_month,
+            end_day: root.end_day,
+            // 额外添加时间单位和内外选项
+            time_unit: root.time_unit,
+            time_newer: root.time_newer,
             regex_pattern: root.regex_pattern,
             regex_target: root.regex_target == 0 ? RegexTarget.FileName : RegexTarget.FilePath,
             record_hash: root.record_hash,
@@ -282,11 +314,10 @@ export component FilterSettingsOptimized {
                                     }
                                 }
                             }
-                        }
-                          // 日期限制
+                        }                        // 日期限制
                         Rectangle {
                             width: 100%;
-                            height: 160px;
+                            height: 220px; // 增大高度以适应更多控件
                             background: #ffffff;
                             border-radius: 6px;
                             
@@ -304,14 +335,14 @@ export component FilterSettingsOptimized {
                                     
                                     Text { text: "限制类型:"; vertical-alignment: center; }                                    
                                     ComboBox {
-                                        model: ["无限制", "输入完整日期", "快速选择"];
+                                        model: ["无限制", "完整指定日期", "快速选择"];
                                         current-index <=> root.date_ui_mode;
                                         selected(index) => {
                                             if (index == "无限制") {
                                                 root.date_ui_mode = 0;
                                                 root.date_limit_type = 0; // None - 重置为无限制
                                                 root.date_render_key += 1; // 强制重新渲染
-                                            } else if (index == "输入完整日期") {
+                                            } else if (index == "完整指定日期") {
                                                 root.date_ui_mode = 1;
                                                 root.date_limit_type = 4; // Specific - 输入完整日期
                                                 root.date_render_key += 1; // 强制重新渲染
@@ -323,45 +354,103 @@ export component FilterSettingsOptimized {
                                             }
                                             root.filter_changed();
                                         }
-                                    }                                }
+                                    }                            
+                                }
                                 
                                 // 动态日期输入区域 - 使用Rectangle的visible属性
                                 Rectangle {
                                     width: 100%;
-                                    height: 40px;
+                                    height: 140px; // 增大高度以适应更多控件
                                     visible: root.date_ui_mode != 0;
                                     
-                                    // 输入完整日期模式
+                                    // 完整指定日期模式 - 支持起始和结束日期
                                     Rectangle {
                                         width: 100%;
                                         height: 100%;
                                         visible: root.date_ui_mode == 1;
                                         
-                                        HorizontalLayout {
-                                            spacing: 10px;
+                        VerticalLayout {
+                                            spacing: 12px;
                                             
-                                            Text { text: "日期:"; vertical-alignment: center; }
-                                            SpinBox {
-                                                value <=> root.specific_year;
-                                                minimum: 1970;
-                                                maximum: 2100;
-                                                edited(value) => { root.filter_changed(); }
+                                            // 起始日期
+                                            HorizontalLayout {
+                                                spacing: 10px;
+                                                
+                                                Text { text: "起始日期:"; vertical-alignment: center; }
+                                                SpinBox {
+                                                    value <=> root.specific_year; // 使用specific_year而不是start_year
+                                                    minimum: 1970;
+                                                    maximum: 2100;
+                                                    edited(value) => { 
+                                                        // 同时更新start_year以保持兼容性
+                                                        root.start_year = value;
+                                                        root.filter_changed(); 
+                                                    }
+                                                }
+                                                Text { text: "年"; vertical-alignment: center; }
+                                                SpinBox {
+                                                    value <=> root.specific_month; // 使用specific_month而不是start_month
+                                                    minimum: 1;
+                                                    maximum: 12;
+                                                    edited(value) => { 
+                                                        // 同时更新start_month以保持兼容性
+                                                        root.start_month = value;
+                                                        root.filter_changed(); 
+                                                    }
+                                                }
+                                                Text { text: "月"; vertical-alignment: center; }
+                                                SpinBox {
+                                                    value <=> root.specific_day; // 使用specific_day而不是start_day
+                                                    minimum: 1;
+                                                    maximum: 31;
+                                                    edited(value) => { 
+                                                        // 同时更新start_day以保持兼容性
+                                                        root.start_day = value;
+                                                        root.filter_changed(); 
+                                                    }
+                                                }
+                                                Text { text: "日"; vertical-alignment: center; }
                                             }
-                                            Text { text: "年"; vertical-alignment: center; }
-                                            SpinBox {
-                                                value <=> root.specific_month;
-                                                minimum: 1;
-                                                maximum: 12;
-                                                edited(value) => { root.filter_changed(); }
+                                            
+                                            // 结束日期
+                                            HorizontalLayout {
+                                                spacing: 10px;
+                                                
+                                                Text { text: "结束日期:"; vertical-alignment: center; }
+                                                SpinBox {
+                                                    value <=> root.end_year;
+                                                    minimum: 1970;
+                                                    maximum: 2100;
+                                                    edited(value) => { root.filter_changed(); }
+                                                }
+                                                Text { text: "年"; vertical-alignment: center; }
+                                                SpinBox {
+                                                    value <=> root.end_month;
+                                                    minimum: 1;
+                                                    maximum: 12;
+                                                    edited(value) => { root.filter_changed(); }
+                                                }
+                                                Text { text: "月"; vertical-alignment: center; }
+                                                SpinBox {
+                                                    value <=> root.end_day;
+                                                    minimum: 1;
+                                                    maximum: 31;
+                                                    edited(value) => { root.filter_changed(); }
+                                                }
+                                                Text { text: "日"; vertical-alignment: center; }
                                             }
-                                            Text { text: "月"; vertical-alignment: center; }
-                                            SpinBox {
-                                                value <=> root.specific_day;
-                                                minimum: 1;
-                                                maximum: 31;
-                                                edited(value) => { root.filter_changed(); }
+                                              // 应用按钮
+                                            Button {
+                                                text: "应用日期范围";
+                                                clicked => {
+                                                    root.date_limit_type = 4; // Specific
+                                                    // 同步起始和结束日期
+                                                    root.start_year = root.specific_year;
+                                                    root.start_month = root.specific_month;
+                                                    root.start_day = root.specific_day;
+                                                    root.filter_changed();
+                                                }
                                             }
-                                            Text { text: "日"; vertical-alignment: center; }
                                         }
                                     }
                                     
@@ -371,45 +460,79 @@ export component FilterSettingsOptimized {
                                         height: 100%;
                                         visible: root.date_ui_mode == 2;
                                         
-                                        HorizontalLayout {
-                                            spacing: 10px;
-                                            alignment: start;
+                                        VerticalLayout {
+                                            spacing: 12px;
                                             
-                                            Button {
-                                                text: "1天内";
-                                                clicked => {
-                                                    root.date_limit_type = 1; // Days
-                                                    root.date_limit_value = 1;
-                                                    root.filter_changed();
+                                            // 快速选择控件
+                                            HorizontalLayout {
+                                                spacing: 10px;
+                                                alignment: start;
+                                                
+                                                Text { text: "数值:"; vertical-alignment: center; }
+                                                SpinBox {
+                                                    value <=> root.time_value;
+                                                    minimum: 1;
+                                                    maximum: 9999;
+                                                    edited(value) => { }
+                                                }
+                                                
+                                                ComboBox {
+                                                    model: ["天", "周", "月", "年"];
+                                                    current-index <=> root.time_unit;
+                                                    selected(index) => { }
+                                                }
+                                                
+                                                ComboBox {
+                                                    model: ["内", "外"];
+                                                    current-index: root.time_newer ? 0 : 1;
+                                                    selected(index) => {
+                                                        root.time_newer = (index == 0);
+                                                    }
                                                 }
                                             }
                                             
+                                            // 应用按钮
                                             Button {
-                                                text: "1周内";
+                                                text: "应用快速选择";
                                                 clicked => {
-                                                    root.date_limit_type = 2; // Weeks
-                                                    root.date_limit_value = 1;
-                                                    root.filter_changed();
-                                                }
-                                            }
-                                            
-                                            Button {
-                                                text: "1年内";
-                                                clicked => {
-                                                    root.date_limit_type = 3; // Years
-                                                    root.date_limit_value = 1;
+                                                    // 根据时间单位设置date_limit_type
+                                                    if (root.time_unit == 0) { // 天
+                                                        root.date_limit_type = 1;
+                                                    } else if (root.time_unit == 1) { // 周
+                                                        root.date_limit_type = 2;
+                                                    } else if (root.time_unit == 2) { // 月
+                                                        // 月份设为天数
+                                                        root.date_limit_type = 1;
+                                                        root.time_value = root.time_value * 30;
+                                                    } else if (root.time_unit == 3) { // 年
+                                                        root.date_limit_type = 3;
+                                                    }
+                                                    
+                                                    // 传递值到date_limit_value
+                                                    root.date_limit_value = root.time_value;
                                                     root.filter_changed();
                                                 }
                                             }
                                         }
                                     }
-                                }// 显示当前选择的日期限制
+                                }
+                                
+                                // 显示当前选择的日期限制
                                 if root.date_limit_type != 0: Text {
-                                    text: root.date_limit_type == 1 ? "已选择: 1天内" :
-                                          root.date_limit_type == 2 ? "已选择: 1周内" :
-                                          root.date_limit_type == 3 ? "已选择: 1年内" :
-                                          root.date_limit_type == 4 ? "已选择: 具体日期 " + root.specific_year + "年" + root.specific_month + "月" + root.specific_day + "日" : 
-                                          "请选择日期限制";
+                                    text: {
+                                        if (root.date_limit_type == 1) {
+                                            return "已选择: " + root.time_value + "天" + (root.time_newer ? "内" : "外");
+                                        } else if (root.date_limit_type == 2) {
+                                            return "已选择: " + root.time_value + "周" + (root.time_newer ? "内" : "外");
+                                        } else if (root.date_limit_type == 3) {
+                                            return "已选择: " + root.time_value + "年" + (root.time_newer ? "内" : "外");
+                                        } else if (root.date_limit_type == 4) {
+                                            return "已选择日期范围: " + root.start_year + "/" + root.start_month + "/" + root.start_day + 
+                                                   " 至 " + root.end_year + "/" + root.end_month + "/" + root.end_day;
+                                        } else {
+                                            return "请选择日期限制";
+                                        }
+                                    }
                                     font-size: 12px;
                                     color: #6c757d;
                                 }
@@ -441,20 +564,39 @@ export component FilterSettingsOptimized {
             // 底部按钮
             HorizontalLayout {
                 spacing: 10px;
-                alignment: end;
-                  Button {
+                alignment: end;                  Button {
                     text: "重置默认值";                    clicked => {
+                        // 基本设置
                         root.search_hidden_files = true;
                         root.search_hidden_folders = true;
                         root.search_readonly_files = true;
                         root.min_file_size = 0;
                         root.max_file_size = 65536;
+                        
+                        // 日期设置
                         root.date_limit_type = 0;
                         root.date_ui_mode = 0; // 重置UI模式
                         root.date_limit_value = 1;
+                        
+                        // 完整日期范围
+                        root.start_year = 2024;
+                        root.start_month = 1;
+                        root.start_day = 1;
+                        root.end_year = 2025;
+                        root.end_month = 6;
+                        root.end_day = 22;
+                        
+                        // 快速选择
+                        root.time_value = 1;
+                        root.time_unit = 0; // 天
+                        root.time_newer = true; // 内
+                        
+                        // 旧的日期设置
                         root.specific_year = 2025;
                         root.specific_month = 6;
                         root.specific_day = 22;
+                        
+                        // 其他设置
                         root.regex_pattern = "";
                         root.regex_target = 0;
                         root.record_hash = false;
