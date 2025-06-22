@@ -48,11 +48,17 @@ impl SearchHelper {
                 let unit = "week";
                 settings::add_type1_timelimit(*weeks as u64, unit, *whether_new);
             },
+            crate::filter::DateLimitType::Months(months, whether_new) => {
+                // 使用月数限制
+                let unit = "month";
+                settings::add_type1_timelimit(*months as u64, unit, *whether_new);
+            },
             crate::filter::DateLimitType::Years(years, whether_new) => {
                 // 使用年数限制
                 let unit = "year";
                 settings::add_type1_timelimit(*years as u64, unit, *whether_new);
-            },            crate::filter::DateLimitType::Specific { 
+            },            
+            crate::filter::DateLimitType::Specific { 
                 minimum_year, minimum_month, minimum_day,
                 maximum_year, maximum_month, maximum_day 
             } => {

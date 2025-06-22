@@ -18,6 +18,7 @@ pub enum DateLimitType {
         maximum_month: u32,
         maximum_day: u32,
     },
+    Months(i32, bool), // 新增：月份限制，值, whether_new(true=内/newer, false=外/older)
 }
 
 /// 正则表达式匹配目标
@@ -115,6 +116,7 @@ impl SearchFilter {
             1 => DateLimitType::Days(date_limit_value, time_newer), // 使用time_newer参数
             2 => DateLimitType::Weeks(date_limit_value, time_newer), // 使用time_newer参数
             3 => DateLimitType::Years(date_limit_value, time_newer), // 使用time_newer参数
+            5 => DateLimitType::Months(date_limit_value, time_newer), // 新增：月份限制
             4 => DateLimitType::Specific {
                 minimum_year: specific_year,
                 minimum_month: specific_month as u32,
@@ -158,80 +160,7 @@ impl SearchFilter {
         })
     }
     
-    /// 将过滤器设置应用到搜索模块的全局变量
-    pub fn apply_to_settings(&self) {
-        unsafe {
-            // 设置隐藏文件和文件夹的搜索选项
-            crate::search_file::settings::SEARCH_HIDDEN_FILES = self.search_hidden_files;
-            crate::search_file::settings::SEARCH_HIDDEN_FOLDERS = self.search_hidden_folders;
-            
-            // 设置只读文件搜索选项
-            crate::search_file::settings::SEARCH_READONLY = self.search_readonly_files;
-            
-            // 设置系统文件搜索选项 (默认打开)
-            crate::search_file::settings::SEARCH_SYSTEM_FILES = true;
-            
-            // 设置文件大小限制
-            crate::search_file::settings::SEARCH_FILESIZE_MINIMUM_LIMIT = self.min_file_size;
-            crate::search_file::settings::SEARCH_FILESIZE_MAXIMUM_LIMIT = self.max_file_size;
-              // 设置时间限制
-            match &self.date_limit {
-                DateLimitType::None => {
-                    crate::search_file::settings::SEARCH_TIMELIMIT = false;
-                    println!("应用无时间限制设置");
-                },
-                DateLimitType::Days(days, whether_new) => {
-                    crate::search_file::settings::SEARCH_TIMELIMIT = true;
-                    crate::search_file::settings::SEARCH_TIMELIMIT_CURRENTTIME_TYPE = true;
-                    crate::search_file::settings::SEARCH_COMPARE_WITH_CURRENT_TIME_NEWER = *whether_new;
-                    crate::search_file::settings::SEARCH_COMPARE_WITH_CURRENT_TIME_LIMIT = (*days as u64) * 24 * 60 * 60;
-                    println!("应用天数限制：{}天{}，设置SEARCH_COMPARE_WITH_CURRENT_TIME_NEWER={}", 
-                        days, if *whether_new { "内" } else { "外" }, *whether_new);
-                },
-                DateLimitType::Weeks(weeks, whether_new) => {
-                    crate::search_file::settings::SEARCH_TIMELIMIT = true;
-                    crate::search_file::settings::SEARCH_TIMELIMIT_CURRENTTIME_TYPE = true;
-                    crate::search_file::settings::SEARCH_COMPARE_WITH_CURRENT_TIME_NEWER = *whether_new;
-                    crate::search_file::settings::SEARCH_COMPARE_WITH_CURRENT_TIME_LIMIT = (*weeks as u64) * 7 * 24 * 60 * 60;
-                    println!("应用周数限制：{}周{}，设置SEARCH_COMPARE_WITH_CURRENT_TIME_NEWER={}", 
-                        weeks, if *whether_new { "内" } else { "外" }, *whether_new);
-                },
-                DateLimitType::Years(years, whether_new) => {
-                    crate::search_file::settings::SEARCH_TIMELIMIT = true;
-                    crate::search_file::settings::SEARCH_TIMELIMIT_CURRENTTIME_TYPE = true;
-                    crate::search_file::settings::SEARCH_COMPARE_WITH_CURRENT_TIME_NEWER = *whether_new;
-                    crate::search_file::settings::SEARCH_COMPARE_WITH_CURRENT_TIME_LIMIT = (*years as u64) * 365 * 24 * 60 * 60;
-                    println!("应用年数限制：{}年{}，设置SEARCH_COMPARE_WITH_CURRENT_TIME_NEWER={}", 
-                        years, if *whether_new { "内" } else { "外" }, *whether_new);
-                },
-                DateLimitType::Specific { 
-                    minimum_year, minimum_month, minimum_day,
-                    maximum_year, maximum_month, maximum_day 
-                } => {
-                    crate::search_file::settings::SEARCH_TIMELIMIT = true;
-                    crate::search_file::settings::SEARCH_TIMELIMIT_CURRENTTIME_TYPE = false;
-                    
-                    // 使用 settings.rs 中的 add_type2_timelimit 函数来设置日期范围
-                    println!("应用完整日期范围限制：从 {}/{}/{} 到 {}/{}/{}", 
-                        minimum_year, minimum_month, minimum_day,
-                        maximum_year, maximum_month, maximum_day);
-                        
-                    crate::search_file::settings::add_type2_timelimit(
-                        *minimum_year, *minimum_month, *minimum_day,
-                        *maximum_year, *maximum_month, *maximum_day
-                    );
-                },
-            }
-            
-            // 设置正则表达式目标
-            crate::search_file::settings::REGEX_CONTAIN_PATH = match self.regex_target {
-                RegexTarget::FileName => false,
-                RegexTarget::FilePath => true,
-            };
-            
-            // 设置是否计算哈希
-            crate::search_file::settings::SAVE_HASH = self.record_hash;
-        }
-    }
+    
+    
 }
 

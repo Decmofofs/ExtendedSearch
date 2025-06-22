@@ -13,6 +13,7 @@ export enum DateLimitType {
     Weeks,
     Years,
     Specific,
+    Months,
 }
 
 // 正则表达式匹配目标枚举
@@ -71,7 +72,7 @@ export component FilterSettingsOptimized {
     // 文件大小限制属性
     in-out property<int> min_file_size: 0;
     in-out property<int> max_file_size: 65536; // 64MB    // 日期限制属性
-    in-out property<int> date_limit_type: 0; // 0=None, 1=Days, 2=Weeks, 3=Years, 4=Specific
+    in-out property<int> date_limit_type: 0; // 0=None, 1=Days, 2=Weeks, 3=Years, 4=Specific, 5=Months
     in-out property<int> date_limit_value: 1;
     
     // 日期UI模式 - 0=无限制, 1=完整日期, 2=快速选择
@@ -120,7 +121,8 @@ export component FilterSettingsOptimized {
             date_limit_type: root.date_limit_type == 0 ? DateLimitType.None :
                            root.date_limit_type == 1 ? DateLimitType.Days :
                            root.date_limit_type == 2 ? DateLimitType.Weeks :
-                           root.date_limit_type == 3 ? DateLimitType.Years : DateLimitType.Specific,
+                           root.date_limit_type == 3 ? DateLimitType.Years :
+                           root.date_limit_type == 5 ? DateLimitType.Months : DateLimitType.Specific,
             date_limit_value: root.date_ui_mode == 2 ? root.time_value : root.date_limit_value, // 快速选择时使用time_value
             // 完整日期范围时，用start_*和end_*替代specific_*
             specific_year: root.date_ui_mode == 1 ? root.start_year : root.specific_year,
@@ -501,9 +503,7 @@ export component FilterSettingsOptimized {
                                                     } else if (root.time_unit == 1) { // 周
                                                         root.date_limit_type = 2;
                                                     } else if (root.time_unit == 2) { // 月
-                                                        // 月份设为天数
-                                                        root.date_limit_type = 1;
-                                                        root.time_value = root.time_value * 30;
+                                                        root.date_limit_type = 5;
                                                     } else if (root.time_unit == 3) { // 年
                                                         root.date_limit_type = 3;
                                                     }
@@ -529,8 +529,10 @@ export component FilterSettingsOptimized {
                                         } else if (root.date_limit_type == 4) {
                                             return "已选择日期范围: " + root.start_year + "/" + root.start_month + "/" + root.start_day + 
                                                    " 至 " + root.end_year + "/" + root.end_month + "/" + root.end_day;
+                                        } else if (root.date_limit_type == 5) {
+                                            return "已选择: " + root.time_value + "月" + (root.time_newer ? "内" : "外");
                                         } else {
-                                            return "请选择日期限制";
+                                            return "请选择日期限制";000.
                                         }
                                     }
                                     font-size: 12px;

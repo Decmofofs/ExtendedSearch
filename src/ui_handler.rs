@@ -303,6 +303,7 @@ impl UIHandler {    /// 创建新的UI处理器
             DateLimitType::Days => 1,
             DateLimitType::Weeks => 2,
             DateLimitType::Years => 3,
+            DateLimitType::Months => 5,
             DateLimitType::Specific => 4,
         };
         
@@ -368,12 +369,14 @@ impl UIHandler {    /// 创建新的UI处理器
                 crate::filter::DateLimitType::Days(..) => DateLimitType::Days,
                 crate::filter::DateLimitType::Weeks(..) => DateLimitType::Weeks,
                 crate::filter::DateLimitType::Years(..) => DateLimitType::Years,
+                crate::filter::DateLimitType::Months(..) => DateLimitType::Months,
                 crate::filter::DateLimitType::Specific { .. } => DateLimitType::Specific,
             },
             date_limit_value: match filter.date_limit {
                 crate::filter::DateLimitType::Days(v, _) => v,
                 crate::filter::DateLimitType::Weeks(v, _) => v,
                 crate::filter::DateLimitType::Years(v, _) => v,
+                crate::filter::DateLimitType::Months(v, _) => v,
                 _ => 1,
             },
             // 基本日期设置 - 使用minimum_*字段
