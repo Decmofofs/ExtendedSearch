@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use native_dialog::{FileDialog, MessageDialog, MessageType};
 use crate::filter::SearchFilter;
 use crate::search_file::{self, SingleFileInformations};
+use crate::helper::SearchHelper;
 
 slint::include_modules!();
 
@@ -311,6 +312,9 @@ impl UIHandler {    /// 创建新的UI处理器
                 // 保存过滤器设置到UIHandler的状态中
                 *current_filter.borrow_mut() = filter.clone();
                 
+                // 应用过滤器设置到SearchHelper
+                SearchHelper::apply_filter_settings(&filter);
+                
                 // 更新UI中的保存的过滤器数据
                 ui.set_saved_filter_data(filter_data);
                 
@@ -403,26 +407,30 @@ impl UIHandler {    /// 创建新的UI处理器
                 }
                 
                 // 获取过滤条件
-                let filter = current_filter.borrow();
-                  // 检索文件
+                let filter = current_filter.borrow().clone();
+                
+                // 检索文件
                 let search_depth = 100; // 最大搜索深度
                 let regex_str = match &filter.regex_pattern {
                     Some(pattern) => pattern.as_str().to_string(),
                     None => String::new(),
                 };
                 
-                // 设置过滤条件到search_file模块
-                filter.apply_to_settings();
+                // 使用SearchHelper执行搜索
+                let found_files = crate::helper::SearchHelper::perform_search(
+                    &paths, 
+                    search_depth, 
+                    &regex_str,
+                    &filter
+                );
+                println!("找到 {} 个文件", found_files.len());
                 
                 // 清空之前的搜索结果
                 while search_results.row_count() > 0 {
                     search_results.remove(0);
                 }
                 
-                // 执行搜索
-                let found_files = search_file::get_files(&paths, search_depth, &regex_str);
-                println!("找到 {} 个文件", found_files.len());
-                  // 添加搜索结果到UI
+                // 添加搜索结果到UI
                 for file in &found_files {
                     let file_info = FileInfo {
                         path: file.path.to_string_lossy().to_string().into(),
@@ -573,7 +581,8 @@ impl UIHandler {    /// 创建新的UI处理器
                     .unwrap_or(false);
                 
                 if confirm {
-                    match search_file::delete_files(&files) {
+                    // 使用SearchHelper删除文件
+                    match SearchHelper::delete_files(&files) {
                         Ok(_) => {
                             MessageDialog::new()
                                 .set_type(MessageType::Info)
@@ -625,7 +634,8 @@ impl UIHandler {    /// 创建新的UI处理器
                         .unwrap();
                     return;
                 }
-                  // 弹出选择目标文件夹的对话框
+                
+                // 弹出选择目标文件夹的对话框
                 let result = FileDialog::new().show_open_single_dir();
                 match result {
                     Ok(Some(dest_path)) => {
@@ -645,9 +655,9 @@ impl UIHandler {    /// 创建新的UI处理器
                                 }
                             }
                             
-                            // 执行映射
+                            // 使用SearchHelper执行映射
                             let source = PathBuf::from(source_path.as_str());
-                            search_file::mapping_files(&files, &source, &dest_path);
+                            SearchHelper::map_files(&files, &source, &dest_path);
                             
                             MessageDialog::new()
                                 .set_type(MessageType::Info)
@@ -711,9 +721,9 @@ impl UIHandler {    /// 创建新的UI处理器
                     return;
                 }
                 
-                // 去重处理
+                // 去重处理 - 使用SearchHelper
                 let original_count = files.len();
-                search_file::unique_files(&mut files);
+                SearchHelper::remove_duplicates(&mut files);
                 let unique_count = files.len();
                 
                 // 更新搜索结果
@@ -771,9 +781,68 @@ impl UIHandler {    /// 创建新的UI处理器
                         .expect("Failed to open finder");
                 }
             }
-        };        // 通过全局接口暴露回调
+        };        // 新增导出结果按钮回调
+        let ui_weak = self.ui.as_weak();
+        let search_results = self.search_results.inner.clone();
+        let export_callback = move || {
+            if let Some(_ui) = ui_weak.upgrade() {
+                // 检查是否有搜索结果
+                if search_results.row_count() == 0 {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
+                        .set_title("提示")
+                        .set_text("没有搜索结果可以导出！")
+                        .show_alert()
+                        .unwrap();
+                    return;
+                }
+                
+                // 弹出文件保存对话框
+                let dialog = FileDialog::new()
+                    .set_filename("search_results.json");
+                
+                if let Ok(Some(file_path)) = dialog.show_save_single_file() {
+                    // 获取搜索结果
+                    let mut files = Vec::new();
+                    for i in 0..search_results.row_count() {
+                        if let Some(file_info) = search_results.row_data(i) {
+                            files.push(SingleFileInformations {
+                                path: PathBuf::from(file_info.path.as_str()),
+                                name: file_info.name.as_str().to_string(),
+                                size: file_info.size as u64,
+                                time: file_info.time as u64,
+                                hash: file_info.hash.as_str().to_string(),
+                            });
+                        }
+                    }
+                    
+                    // 使用SearchHelper导出结果
+                    match SearchHelper::export_results(&files, Some(file_path.to_str().unwrap())) {
+                        Ok(_) => {
+                            MessageDialog::new()
+                                .set_type(MessageType::Info)
+                                .set_title("导出成功")
+                                .set_text(&format!("成功导出 {} 个搜索结果", files.len()))
+                                .show_alert()
+                                .unwrap();
+                        },
+                        Err(e) => {
+                            MessageDialog::new()
+                                .set_type(MessageType::Error)
+                                .set_title("导出失败")
+                                .set_text(&format!("导出结果时出错: {}", e))
+                                .show_alert()
+                                .unwrap();
+                        }
+                    }
+                }
+            }
+        };
+        
+        // 通过全局接口暴露回调
         self.ui.on_handle_search_clicked(search_callback);
         self.ui.on_handle_import_results(import_callback);
+        self.ui.on_handle_export_results(export_callback);
         self.ui.on_handle_select_folder(select_folder_callback);
         self.ui.on_handle_delete_selected_files(delete_files_callback);
         self.ui.on_handle_map_files(map_files_callback);

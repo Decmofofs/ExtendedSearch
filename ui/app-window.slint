@@ -22,6 +22,7 @@ export component AppWindow inherits Window {
     // 处理搜索相关回调
     callback handle_search_clicked();
     callback handle_import_results();
+    callback handle_export_results();
     callback handle_select_folder();
     callback handle_delete_selected_files();
     callback handle_map_files();
@@ -51,6 +52,7 @@ export component AppWindow inherits Window {
             // 搜索相关回调
             search_clicked => { root.handle_search_clicked(); }
             import_results => { root.handle_import_results(); }
+            export_results => { root.handle_export_results(); }
             select_folder => { root.handle_select_folder(); }
             delete_selected_files => { root.handle_delete_selected_files(); }
             map_files => { root.handle_map_files(); }

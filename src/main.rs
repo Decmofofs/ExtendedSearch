@@ -4,6 +4,7 @@
 mod ui_handler;
 mod filter;
 mod search_file;
+mod helper;
 
 
 use std::error::Error;

@@ -9,15 +9,20 @@ export component SearchPage {
     // 回调函数
     callback search_clicked();
     callback import_results();
+    callback export_results();
     callback select_folder();
     callback delete_selected_files();
     callback map_files();
     callback remove_duplicates();
     callback open_folder(string);
     
+    width: 90%;
+    height: 90%;
+
     HorizontalLayout {
         spacing: 10px;
         padding: 10px;
+        
         
         // 左侧区域 - 搜索结果显示区域
         results-area := Rectangle {
@@ -52,6 +57,14 @@ export component SearchPage {
                     text: "导入结果";
                     clicked => {
                         root.import_results();
+                    }
+                }
+                
+                // 导出按钮
+                CustomButton {
+                    text: "导出结果";
+                    clicked => {
+                        root.export_results();
                     }
                 }
                 

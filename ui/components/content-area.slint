@@ -23,6 +23,7 @@ export component ContentArea {
     // 搜索相关回调
     callback search_clicked();
     callback import_results();
+    callback export_results();
     callback select_folder();
     callback delete_selected_files();
     callback map_files();
@@ -71,6 +72,9 @@ export component ContentArea {
             }
             import_results => {
                 root.import_results();
+            }
+            export_results => {
+                root.export_results();
             }
             select_folder => {
                 root.select_folder();
