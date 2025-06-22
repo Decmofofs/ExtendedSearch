@@ -484,9 +484,11 @@ impl UIHandler {    /// 创建新的UI处理器
                         file_infos.push(info);
                     }
                 }
-                
-                // 使用from_slice方法创建一个新的VecModel直接传递给UI
+                  // 使用from_slice方法创建一个新的VecModel直接传递给UI
                 _ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+                
+                // 重置选择数量为0（新搜索结果默认不选中）
+                _ui.set_selected_count(0);
             }
         };
         
@@ -527,9 +529,11 @@ impl UIHandler {    /// 创建新的UI处理器
                                                 file_infos.push(info);
                                             }
                                         }
-                                        
-                                        // 使用from_slice方法创建一个新的VecModel直接传递给UI
+                                          // 使用from_slice方法创建一个新的VecModel直接传递给UI
                                         _ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+                                        
+                                        // 重置选择数量为0（导入结果默认不选中）
+                                        _ui.set_selected_count(0);
                                         
                                         println!("成功导入 {} 个搜索结果", files.len());
                                     },
@@ -797,9 +801,11 @@ impl UIHandler {    /// 创建新的UI处理器
                     search_results.push(file_info.clone());
                     file_infos.push(file_info);
                 }
-                
-                // 使用from_slice方法直接更新UI中的搜索结果
+                  // 使用from_slice方法直接更新UI中的搜索结果
                 _ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+                
+                // 重置选择数量为0（去重后默认不选中）
+                _ui.set_selected_count(0);
                 
                 MessageDialog::new()
                     .set_type(MessageType::Info)
@@ -906,8 +912,7 @@ impl UIHandler {    /// 创建新的UI处理器
                 if let Some(mut file_info) = search_results.row_data(index as usize) {
                     file_info.selected = selected;
                     search_results.set_row_data(index as usize, file_info);
-                    
-                    // 计算已选择的数量并打印
+                      // 计算已选择的数量并打印
                     let mut selected_count = 0;
                     for i in 0..search_results.row_count() {
                         if let Some(info) = search_results.row_data(i) {
@@ -917,6 +922,9 @@ impl UIHandler {    /// 创建新的UI处理器
                         }
                     }
                     println!("已选择 {}/{} 个文件", selected_count, search_results.row_count());
+                    
+                    // 更新选择数量到UI
+                    ui.set_selected_count(selected_count);
                     
                     // 转换为Vec后再更新UI
                     let mut file_infos = Vec::new();
@@ -944,9 +952,12 @@ impl UIHandler {    /// 创建新的UI处理器
                         file_infos.push(info);
                     }
                 }
-                
-                // 更新UI
+                  // 更新UI
                 ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+                
+                // 更新选择数量到UI
+                let selected_count = if selected { search_results.row_count() } else { 0 };
+                ui.set_selected_count(selected_count as i32);
                 
                 println!("{}全选 {} 个文件", 
                     if selected { "" } else { "取消" }, 
@@ -972,8 +983,10 @@ impl UIHandler {    /// 创建新的UI处理器
         for i in 0..self.search_results.inner.row_count() {
             if let Some(info) = self.search_results.inner.row_data(i) {
                 file_infos.push(info);            }
-        }
-          self.ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+        }          self.ui.set_search_results(slint::VecModel::from_slice(&file_infos));
         self.ui.set_selected_paths(self.selected_paths.clone().into());
+        
+        // 初始化选择数量为0
+        self.ui.set_selected_count(0);
     }
 }

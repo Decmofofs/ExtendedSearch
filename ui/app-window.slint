@@ -14,10 +14,10 @@ export component AppWindow inherits Window {
     callback remove_selected();
     callback directory_toggled(int);
     callback filter_changed(FilterData);
-    
-    // 搜索结果和路径
+      // 搜索结果和路径
     in-out property<[FileInfo]> search_results;
     in-out property<[string]> selected_paths;
+    in-out property<int> selected_count: 0; // 已选择的文件数量
       // 处理搜索相关回调
     callback handle_search_clicked();
     callback handle_import_results();
@@ -43,6 +43,7 @@ export component AppWindow inherits Window {
             saved_filter_data: root.saved_filter_data; // 传递保存的过滤器设置
             search_results <=> root.search_results;
             selected_paths <=> root.selected_paths;
+            selected_count <=> root.selected_count; // 传递选择数量
             
             add_directory => { root.add_directory(); }
             remove_selected => { root.remove_selected(); }

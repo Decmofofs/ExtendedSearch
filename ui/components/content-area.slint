@@ -15,10 +15,10 @@ export component ContentArea {
     
     // 过滤设置数据
     property<FilterData> filter_data;
-    
-    // 搜索相关属性
+      // 搜索相关属性
     in-out property<[FileInfo]> search_results;
     in-out property<[string]> selected_paths;
+    in-out property<int> selected_count: 0; // 已选择的文件数量
       // 搜索相关回调
     callback search_clicked();
     callback import_results();
@@ -69,6 +69,7 @@ export component ContentArea {
         }        if current_page == 2: search_page := SearchPage {
             search_results <=> root.search_results;
             selected_paths <=> root.selected_paths;
+            selected_count <=> root.selected_count; // 传递选择数量
             
             search_clicked => {
                 root.search_clicked();

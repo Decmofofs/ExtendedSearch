@@ -5,6 +5,7 @@ import { FileInfo, SearchResultView } from "./search-result-view.slint";
 export component SearchPage {
     in-out property<[FileInfo]> search_results: [];
     in-out property<[string]> selected_paths: [];
+    in-out property<int> selected_count: 0; // 已选择的文件数量
       // 回调函数
     callback search_clicked();
     callback import_results();
@@ -29,9 +30,9 @@ export component SearchPage {
         
         // 左侧区域 - 搜索结果显示区域
         results-area := Rectangle {
-            width: 80%;
-              SearchResultView {
+            width: 80%;              SearchResultView {
                 files: root.search_results;
+                selected_count: root.selected_count; // 传递选择数量
                 
                 // 双击文件项
                 item_double_clicked(file) => {
