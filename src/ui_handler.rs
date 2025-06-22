@@ -214,9 +214,10 @@ impl UIHandler {    /// 创建新的UI处理器
             println!("{}: {}", status, item.path);
         }
     }
-    
-    /// 运行UI
+      /// 运行UI
     pub fn run(&self) -> Result<(), slint::PlatformError> {
+        // 确保初始搜索结果为空
+        self.ui.set_search_results(slint::VecModel::from_slice(&[]));
         self.ui.run()
     }
     
@@ -457,8 +458,7 @@ impl UIHandler {    /// 创建新的UI处理器
                     &filter
                 );
                 println!("找到 {} 个文件", found_files.len());
-                
-                // 清空之前的搜索结果
+                  // 清空之前的搜索结果
                 while search_results.row_count() > 0 {
                     search_results.remove(0);
                 }
@@ -474,6 +474,18 @@ impl UIHandler {    /// 创建新的UI处理器
                     };
                     search_results.push(file_info);
                 }
+                  println!("搜索完成，找到 {} 个文件", search_results.row_count());
+                
+                // 先把结果转换为Vec后再传递给UI
+                let mut file_infos = Vec::new();
+                for i in 0..search_results.row_count() {
+                    if let Some(info) = search_results.row_data(i) {
+                        file_infos.push(info);
+                    }
+                }
+                
+                // 使用from_slice方法创建一个新的VecModel直接传递给UI
+                _ui.set_search_results(slint::VecModel::from_slice(&file_infos));
             }
         };
         
@@ -496,8 +508,7 @@ impl UIHandler {    /// 创建新的UI处理器
                                         while search_results.row_count() > 0 {
                                             search_results.remove(0);
                                         }
-                                        
-                                        // 添加导入的结果
+                                          // 添加导入的结果
                                         for file in &files {
                                             let file_info = FileInfo {
                                                 path: file.path.to_string_lossy().to_string().into(),
@@ -508,6 +519,16 @@ impl UIHandler {    /// 创建新的UI处理器
                                             };
                                             search_results.push(file_info);
                                         }
+                                          // 先把结果转换为Vec后再传递给UI
+                                        let mut file_infos = Vec::new();
+                                        for i in 0..search_results.row_count() {
+                                            if let Some(info) = search_results.row_data(i) {
+                                                file_infos.push(info);
+                                            }
+                                        }
+                                        
+                                        // 使用from_slice方法创建一个新的VecModel直接传递给UI
+                                        _ui.set_search_results(slint::VecModel::from_slice(&file_infos));
                                         
                                         println!("成功导入 {} 个搜索结果", files.len());
                                     },
@@ -763,7 +784,7 @@ impl UIHandler {    /// 创建新的UI处理器
                 while search_results.row_count() > 0 {
                     search_results.remove(0);
                 }
-                
+                  let mut file_infos = Vec::new();
                 for file in &files {
                     let file_info = FileInfo {
                         path: file.path.to_string_lossy().to_string().into(),
@@ -772,8 +793,12 @@ impl UIHandler {    /// 创建新的UI处理器
                         time: file.time as i32,
                         hash: file.hash.clone().into(),
                     };
-                    search_results.push(file_info);
+                    search_results.push(file_info.clone());
+                    file_infos.push(file_info);
                 }
+                
+                // 使用from_slice方法直接更新UI中的搜索结果
+                _ui.set_search_results(slint::VecModel::from_slice(&file_infos));
                 
                 MessageDialog::new()
                     .set_type(MessageType::Info)
@@ -881,9 +906,15 @@ impl UIHandler {    /// 创建新的UI处理器
         self.ui.on_handle_map_files(map_files_callback);
         self.ui.on_handle_remove_duplicates(remove_duplicates_callback);
         self.ui.on_handle_open_folder(open_folder_callback);
-        
-        // 设置初始数据绑定
-        self.ui.set_search_results(self.search_results.inner.clone().into());
+          // 设置初始数据绑定
+        // 先将search_results模型转换为Vec，然后再创建一个新的VecModel
+        let mut file_infos = Vec::new();
+        for i in 0..self.search_results.inner.row_count() {
+            if let Some(info) = self.search_results.inner.row_data(i) {
+                file_infos.push(info);
+            }
+        }
+        self.ui.set_search_results(slint::VecModel::from_slice(&file_infos));
         self.ui.set_selected_paths(self.selected_paths.clone().into());
     }
 }

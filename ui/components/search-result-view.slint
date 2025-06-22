@@ -15,12 +15,15 @@ component ResultItem {
     callback double_clicked();
     
     height: 50px;
+    width: 100%;
     
     VerticalLayout {
         Rectangle {
             background: touch.has-hover ? #f0f0f0 : transparent;
+            width: 100%;
             
             HorizontalLayout {
+                width: 100%;
                 padding: 8px;
                 spacing: 10px;
                 
@@ -77,68 +80,111 @@ component ResultItem {
 export component SearchResultView {
     in property<[FileInfo]> files;
     callback item_double_clicked(FileInfo);
+    width: 100%;
+    height: 100%;
     
-    Rectangle {
-        background: white;
-        border-radius: 4px;
-        border-color: #ddd;
-        border-width: 1px;
+    VerticalLayout {
+        // background: white;
+        // border-radius: 4px;
+        // border-color: #ddd;
+        // border-width: 1px;
         
-        // 表头
+        // 表头区域 - 固定在视图顶部
         header := Rectangle {
-            height: 40px;
+            z: 10; // 确保表头在最上层
+            height: 41px; // 40px高度 + 1px底部边框
             background: #f5f5f5;
+            drop-shadow-color: #aaaaaa80;
+            drop-shadow-blur: 3px;
+            drop-shadow-offset-y: 2px;
             
-            HorizontalLayout {
-                padding: 8px;
-                spacing: 10px;
-                
-                Text {
-                    text: "名称";
-                    font-weight: 700;
-                    vertical-alignment: center;
-                    width: 200px;
+            VerticalLayout {
+                spacing: 0px;
+                // 表头内容
+                Rectangle {
+                    height: 40px;
+                    HorizontalLayout {
+                        padding: 8px;
+                        spacing: 10px;
+                        
+                        Text {
+                            text: "名称";
+                            font-weight: 700;
+                            vertical-alignment: center;
+                            width: 200px;
+                        }
+                        
+                        Text {
+                            text: "大小";
+                            font-weight: 700;
+                            vertical-alignment: center;
+                            width: 80px;
+                        }
+                        
+                        Text {
+                            text: "路径";
+                            font-weight: 700;
+                            vertical-alignment: center;
+                        }
+                    }
                 }
                 
-                Text {
-                    text: "大小";
-                    font-weight: 700;
-                    vertical-alignment: center;
-                    width: 80px;
-                }
-                
-                Text {
-                    text: "路径";
-                    font-weight: 700;
-                    vertical-alignment: center;
+                // 表头底部分隔线
+                Rectangle {
+                    height: 1px;
+                    width: 100%;
+                    background: #ddd;
                 }
             }
         }
-        
-        Rectangle {
-            y: header.height;
-            height: 1px;
-            width: 100%;
-            background: #ddd;
-        }
-        
-        // 结果列表
+          // 结果列表 - 下方可滚动区域
         Flickable {
-            y: header.height + 1px;
-            height: parent.height - header.height - 1px;
+            
+            height: parent.height - header.height;
             width: 100%;
+            // viewport 高度根据内容决定
             viewport-height: results.preferred-height;
             viewport-width: parent.width;
-            
+            //clip: true;
             results := VerticalLayout {
-                padding: 0px;
+                width: 100%;
+                padding-top: 5px; // 顶部添加一点填充
+                padding-bottom: 5px;
+                padding-left: 0px;
+                padding-right: 0px;
                 spacing: 0px;
                 
+                // 添加debug信息来查看数组长度
+                Text { 
+                    height: 0px; // 不可见的元素，仅用于调试
+                    text: files.length <= 0 ? "空" : files.length + "";
+                    color: transparent;
+                }
+                
+                // 列表项
                 for file in files: ResultItem {
                     file: file;
                     double_clicked => {
                         root.item_double_clicked(file);
                     }
+                }
+                  // 如果没有结果，显示一个提示
+                Rectangle {
+                    height: files.length <= 0 ? 60px : 0px;
+                    visible: files.length <= 0;
+                    
+                    Text {
+                        text: "暂无搜索结果";
+                        color: #888;
+                        font-size: 14px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+                
+                // 底部额外空间，确保能够滚动到最后一个项
+                Rectangle {
+                    height: files.length > 0 ? 10px : 0px;
                 }
             }
         }
