@@ -5,12 +5,14 @@ import { FileInfo, SearchResultView } from "./search-result-view.slint";
 export component SearchPage {
     in-out property<[FileInfo]> search_results: [];
     in-out property<[string]> selected_paths: [];
-    in-out property<int> selected_count: 0; // 已选择的文件数量
+    in-out property<int> selected_count: 0; // 选中的文件计数
       // 回调函数
     callback search_clicked();
     callback import_results();
     callback export_results();
     callback select_folder();
+    callback move_selected_files(); // 新增移动选中文件回调
+    callback copy_selected_files(); // 新增复制选中文件回调
     callback delete_selected_files();
     callback map_files();
     callback remove_duplicates();
@@ -30,9 +32,10 @@ export component SearchPage {
         
         // 左侧区域 - 搜索结果显示区域
         results-area := Rectangle {
-            width: 80%;              SearchResultView {
+            width: 80%;
+              result-view := SearchResultView {
                 files: root.search_results;
-                selected_count: root.selected_count; // 传递选择数量
+                selected_count: root.selected_count; // 使用页面组件的选中计数
                 
                 // 双击文件项
                 item_double_clicked(file) => {
@@ -85,7 +88,7 @@ export component SearchPage {
                 
                 // 占位区域
                 Rectangle {
-                    height: 20px;
+                    
                 }
                 
                 // 文件夹选择区域
@@ -93,7 +96,7 @@ export component SearchPage {
                     spacing: 5px;
                     
                     CustomButton {
-                        text: "指定文件夹";
+                        text: "设置目标文件夹";
                         clicked => {
                             root.select_folder();
                         }
@@ -104,23 +107,30 @@ export component SearchPage {
                         border-width: 1px;
                         border-color: #cccccc;
                         border-radius: 4px;
-                        background: #f8f8f8;
-                        height: 80px;
+                        background: path-touch.has-hover ? #e6f3ff : #f8f8f8;
+                        height: 35px;
                         
-                        Flickable {
+                        path-touch := TouchArea {
                             width: 100%;
                             height: 100%;
-                            viewport-height: path-list.preferred-height;
+                        }
+                        
+                        HorizontalLayout {
+                            padding: 8px;
+                            alignment: center;
                             
-                            path-list := VerticalLayout {
-                                padding: 5px;
-                                spacing: 2px;
-                                
-                                for path in root.selected_paths: Text {
-                                    text: path;
-                                    font-size: 12px;
-                                    overflow: elide;
-                                }
+                            if root.selected_paths.length > 0: Text {
+                                text: root.selected_paths[0];
+                                font-size: 12px;
+                                overflow: elide;
+                                color: #333;
+                                vertical-alignment: center;
+                            }
+                              if root.selected_paths.length == 0: Text {
+                                text: "未选择文件夹";
+                                font-size: 12px;
+                                color: #888;
+                                vertical-alignment: center;
                             }
                         }
                     }
@@ -135,6 +145,20 @@ export component SearchPage {
                 // 底部功能按钮区域
                 VerticalLayout {
                     spacing: 8px;
+                    
+                    CustomButton {
+                        text: "移动选中文件";
+                        clicked => {
+                            root.move_selected_files();
+                        }
+                    }
+                    
+                    CustomButton {
+                        text: "复制选中文件";
+                        clicked => {
+                            root.copy_selected_files();
+                        }
+                    }
                     
                     CustomButton {
                         text: "删除选中文件";

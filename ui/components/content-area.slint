@@ -15,15 +15,18 @@ export component ContentArea {
     
     // 过滤设置数据
     property<FilterData> filter_data;
-      // 搜索相关属性
+    
+    // 搜索相关属性
     in-out property<[FileInfo]> search_results;
     in-out property<[string]> selected_paths;
-    in-out property<int> selected_count: 0; // 已选择的文件数量
+    in-out property<int> selected_count: 0;
       // 搜索相关回调
     callback search_clicked();
     callback import_results();
     callback export_results();
     callback select_folder();
+    callback move_selected_files(); // 新增移动选中文件回调
+    callback copy_selected_files(); // 新增复制选中文件回调
     callback delete_selected_files();
     callback map_files();
     callback remove_duplicates();
@@ -69,7 +72,7 @@ export component ContentArea {
         }        if current_page == 2: search_page := SearchPage {
             search_results <=> root.search_results;
             selected_paths <=> root.selected_paths;
-            selected_count <=> root.selected_count; // 传递选择数量
+            selected_count <=> root.selected_count;
             
             search_clicked => {
                 root.search_clicked();
@@ -82,6 +85,12 @@ export component ContentArea {
             }
             select_folder => {
                 root.select_folder();
+            }
+            move_selected_files => {
+                root.move_selected_files();
+            }
+            copy_selected_files => {
+                root.copy_selected_files();
             }
             delete_selected_files => {
                 root.delete_selected_files();

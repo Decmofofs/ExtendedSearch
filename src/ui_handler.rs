@@ -1,7 +1,7 @@
 use slint::{Model, VecModel, SharedString};
 use std::rc::Rc;
 use std::path::PathBuf;
-use native_dialog::{DialogBuilder, MessageLevel};
+use native_dialog::{FileDialog, MessageDialog, MessageType};
 use crate::filter::SearchFilter;
 use crate::search_file::SingleFileInformations;
 use crate::helper::SearchHelper;
@@ -136,10 +136,10 @@ impl UIHandler {    /// 创建新的UI处理器
             }
         });
     }    /// 添加目录
-    fn add_directory(directories: &Rc<VecModel<DirectoryItem>>, ui: &AppWindow) {        // 打开文件夹选择对话框
-        match DialogBuilder::file()
-            .open_single_dir()
-            .show()
+    fn add_directory(directories: &Rc<VecModel<DirectoryItem>>, ui: &AppWindow) {
+        // 打开文件夹选择对话框
+        match FileDialog::new()
+            .show_open_single_dir()
         {
             Ok(Some(folder_path)) => {
                 // 检查是否已经添加过这个目录
@@ -429,13 +429,13 @@ impl UIHandler {    /// 创建新的UI处理器
                         }
                     }
                 }
-                  if paths.is_empty() {
-                    DialogBuilder::message()
-                        .set_level(MessageLevel::Info)
+                
+                if paths.is_empty() {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
                         .set_title("提示")
                         .set_text("请选择至少一个目录进行搜索！")
-                        .alert()
-                        .show()
+                        .show_alert()
                         .unwrap();
                     return;
                 }
@@ -484,11 +484,9 @@ impl UIHandler {    /// 创建新的UI处理器
                         file_infos.push(info);
                     }
                 }
-                  // 使用from_slice方法创建一个新的VecModel直接传递给UI
-                _ui.set_search_results(slint::VecModel::from_slice(&file_infos));
                 
-                // 重置选择数量为0（新搜索结果默认不选中）
-                _ui.set_selected_count(0);
+                // 使用from_slice方法创建一个新的VecModel直接传递给UI
+                _ui.set_search_results(slint::VecModel::from_slice(&file_infos));
             }
         };
         
@@ -497,9 +495,8 @@ impl UIHandler {    /// 创建新的UI处理器
         let search_results = self.search_results.inner.clone();
         let import_callback = move || {
             if let Some(_ui) = ui_weak.upgrade() {                // 弹出文件选择对话框
-                let result = DialogBuilder::file()
-                    .open_single_file()
-                    .show();
+                let dialog = FileDialog::new();
+                let result = dialog.show_open_single_file();
                 match result {
                     Ok(Some(file_path)) => {
                         // 读取JSON文件
@@ -530,84 +527,272 @@ impl UIHandler {    /// 创建新的UI处理器
                                                 file_infos.push(info);
                                             }
                                         }
-                                          // 使用from_slice方法创建一个新的VecModel直接传递给UI
+                                        
+                                        // 使用from_slice方法创建一个新的VecModel直接传递给UI
                                         _ui.set_search_results(slint::VecModel::from_slice(&file_infos));
                                         
-                                        // 重置选择数量为0（导入结果默认不选中）
-                                        _ui.set_selected_count(0);
-                                        
                                         println!("成功导入 {} 个搜索结果", files.len());
-                                    },                                    Err(e) => {
-                                        DialogBuilder::message()
-                                            .set_level(MessageLevel::Error)
+                                    },
+                                    Err(e) => {
+                                        MessageDialog::new()
+                                            .set_type(MessageType::Error)
                                             .set_title("导入失败")
                                             .set_text(&format!("解析JSON文件失败: {}", e))
-                                            .alert()
-                                            .show()
+                                            .show_alert()
                                             .unwrap();
                                     }
                                 }
-                            },                            Err(e) => {
-                                DialogBuilder::message()
-                                    .set_level(MessageLevel::Error)
+                            },
+                            Err(e) => {
+                                MessageDialog::new()
+                                    .set_type(MessageType::Error)
                                     .set_title("导入失败")
                                     .set_text(&format!("读取文件失败: {}", e))
-                                    .alert()
-                                    .show()
+                                    .show_alert()
                                     .unwrap();
                             }
                         }
                     },
                     Ok(None) => {
                         // 用户取消了选择
-                    },                    Err(e) => {
-                        DialogBuilder::message()
-                            .set_level(MessageLevel::Error)
+                    },
+                    Err(e) => {
+                        MessageDialog::new()
+                            .set_type(MessageType::Error)
                             .set_title("错误")
                             .set_text(&format!("文件对话框错误: {}", e))
-                            .alert()
-                            .show()
+                            .show_alert()
                             .unwrap();
                     }
                 }
             }
         };
         
-        // 3. 选择文件夹按钮回调
+        // 3. 设置目标文件夹按钮回调
         let ui_weak = self.ui.as_weak();
         let selected_paths = self.selected_paths.clone();
+        let search_results = self.search_results.inner.clone();
         let select_folder_callback = move || {
-            if let Some(_ui) = ui_weak.upgrade() {                match DialogBuilder::file()
-                    .open_single_dir()
-                    .show() {
+            if let Some(_ui) = ui_weak.upgrade() {
+                match FileDialog::new()
+                    .show_open_single_dir() {
                     Ok(Some(folder_path)) => {
                         let path_str = folder_path.to_string_lossy().to_string();
                         
-                        // 检查是否已经添加过这个路径
-                        let mut already_exists = false;
-                        for i in 0..selected_paths.row_count() {
-                            if let Some(existing_path) = selected_paths.row_data(i) {
-                                if existing_path.as_str() == path_str {
-                                    already_exists = true;
-                                    break;
+                        // 清空已有的路径并添加新的路径
+                        while selected_paths.row_count() > 0 {
+                            selected_paths.remove(0);
+                        }
+                        
+                        // 添加新选择的路径
+                        selected_paths.push(path_str.clone().into());
+                        
+                        // 打印当前选择的目标文件夹路径
+                        println!("已设置目标文件夹: {}", path_str);
+                        
+                        // 打印当前选中的搜索结果文件列表
+                        let mut selected_files = Vec::new();
+                        for i in 0..search_results.row_count() {
+                            if let Some(file_info) = search_results.row_data(i) {
+                                if file_info.selected {
+                                    selected_files.push(file_info.path.as_str().to_string());
                                 }
                             }
                         }
-                          if !already_exists {
-                            selected_paths.push(path_str.clone().into());
-                        }
+                        println!("当前选中的文件: {:?}", selected_files);
                     },
                     Ok(None) => {
                         // 用户取消了选择
                     },
                     Err(e) => {
-                        DialogBuilder::message()
-                            .set_level(MessageLevel::Error)
+                        MessageDialog::new()
+                            .set_type(MessageType::Error)
                             .set_title("错误")
                             .set_text(&format!("文件夹选择对话框错误: {}", e))
-                            .alert()
-                            .show()
+                            .show_alert()
                             .unwrap();
+                    }
+                }
+            }
+        };
+        
+        // 3.5 复制选中文件按钮回调
+        let ui_weak = self.ui.as_weak();
+        let search_results = self.search_results.inner.clone();
+        let selected_paths = self.selected_paths.clone();
+        let copy_files_callback = move || {
+            if let Some(ui) = ui_weak.upgrade() {
+                // 获取选中的文件
+                let mut files = Vec::new();
+                
+                for i in 0..search_results.row_count() {
+                    if let Some(file_info) = search_results.row_data(i) {
+                        if file_info.selected {  // 只处理已选中的文件
+                            files.push(SingleFileInformations {
+                                path: PathBuf::from(file_info.path.as_str()),
+                                name: file_info.name.as_str().to_string(),
+                                size: file_info.size as u64,
+                                time: file_info.time as u64,
+                                hash: file_info.hash.as_str().to_string(),
+                            });
+                        }
+                    }
+                }
+                
+                // 检查是否有选中的文件
+                if files.is_empty() {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
+                        .set_title("提示")
+                        .set_text("请先选择要复制的文件！")
+                        .show_alert()
+                        .unwrap();
+                    return;
+                }
+                
+                // 检查是否有设置目标文件夹
+                if selected_paths.row_count() == 0 {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
+                        .set_title("提示")
+                        .set_text("请先设置一个目标文件夹！")
+                        .show_alert()
+                        .unwrap();
+                    return;
+                }
+                
+                // 确认复制
+                let confirm = MessageDialog::new()
+                    .set_type(MessageType::Warning)
+                    .set_title("确认复制")
+                    .set_text(&format!("确定要将选中的 {} 个文件复制到目标文件夹吗？", files.len()))
+                    .show_confirm()
+                    .unwrap_or(false);
+                
+                if confirm {
+                    // 获取目标文件夹路径
+                    if let Some(dest_path_str) = selected_paths.row_data(0) {
+                        let dest_path = PathBuf::from(dest_path_str.as_str());
+                        
+                        // 使用SearchHelper复制文件
+                        match SearchHelper::copy_files_to(&files, &dest_path) {
+                            Ok(_) => {
+                                MessageDialog::new()
+                                    .set_type(MessageType::Info)
+                                    .set_title("复制成功")
+                                    .set_text(&format!("成功复制 {} 个文件到 {}", files.len(), dest_path.to_string_lossy()))
+                                    .show_alert()
+                                    .unwrap();
+                            },
+                            Err(e) => {
+                                MessageDialog::new()
+                                    .set_type(MessageType::Error)
+                                    .set_title("复制失败")
+                                    .set_text(&format!("复制文件时出错: {}", e))
+                                    .show_alert()
+                                    .unwrap();
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        
+        // 3.6 移动选中文件按钮回调
+        let ui_weak = self.ui.as_weak();
+        let search_results = self.search_results.inner.clone();
+        let selected_paths = self.selected_paths.clone();
+        let move_files_callback = move || {
+            if let Some(ui) = ui_weak.upgrade() {
+                // 获取选中的文件
+                let mut files = Vec::new();
+                let mut indices_to_remove = Vec::new();
+                
+                for i in 0..search_results.row_count() {
+                    if let Some(file_info) = search_results.row_data(i) {
+                        if file_info.selected {  // 只处理已选中的文件
+                            files.push(SingleFileInformations {
+                                path: PathBuf::from(file_info.path.as_str()),
+                                name: file_info.name.as_str().to_string(),
+                                size: file_info.size as u64,
+                                time: file_info.time as u64,
+                                hash: file_info.hash.as_str().to_string(),
+                            });
+                            indices_to_remove.push(i);
+                        }
+                    }
+                }
+                
+                // 检查是否有选中的文件
+                if files.is_empty() {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
+                        .set_title("提示")
+                        .set_text("请先选择要移动的文件！")
+                        .show_alert()
+                        .unwrap();
+                    return;
+                }
+                
+                // 检查是否有设置目标文件夹
+                if selected_paths.row_count() == 0 {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
+                        .set_title("提示")
+                        .set_text("请先设置一个目标文件夹！")
+                        .show_alert()
+                        .unwrap();
+                    return;
+                }
+                
+                // 确认移动
+                let confirm = MessageDialog::new()
+                    .set_type(MessageType::Warning)
+                    .set_title("确认移动")
+                    .set_text(&format!("确定要将选中的 {} 个文件移动到目标文件夹吗？此操作将改变文件位置！", files.len()))
+                    .show_confirm()
+                    .unwrap_or(false);
+                
+                if confirm {
+                    // 获取目标文件夹路径
+                    if let Some(dest_path_str) = selected_paths.row_data(0) {
+                        let dest_path = PathBuf::from(dest_path_str.as_str());
+                        
+                        // 使用SearchHelper移动文件
+                        match SearchHelper::move_files_to(&files, &dest_path) {
+                            Ok(_) => {
+                                MessageDialog::new()
+                                    .set_type(MessageType::Info)
+                                    .set_title("移动成功")
+                                    .set_text(&format!("成功移动 {} 个文件到 {}", files.len(), dest_path.to_string_lossy()))
+                                    .show_alert()
+                                    .unwrap();
+                                
+                                // 从搜索结果中移除已移动的文件
+                                // 从后向前移除，避免索引问题
+                                indices_to_remove.sort_by(|a, b| b.cmp(a));
+                                for index in indices_to_remove {
+                                    search_results.remove(index);
+                                }
+                                
+                                // 更新UI显示
+                                let mut file_infos = Vec::new();
+                                for i in 0..search_results.row_count() {
+                                    if let Some(info) = search_results.row_data(i) {
+                                        file_infos.push(info);
+                                    }
+                                }
+                                ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+                            },
+                            Err(e) => {
+                                MessageDialog::new()
+                                    .set_type(MessageType::Error)
+                                    .set_title("移动失败")
+                                    .set_text(&format!("移动文件时出错: {}", e))
+                                    .show_alert()
+                                    .unwrap();
+                            }
+                        }
                     }
                 }
             }
@@ -617,51 +802,78 @@ impl UIHandler {    /// 创建新的UI处理器
         let ui_weak = self.ui.as_weak();
         let search_results = self.search_results.inner.clone();
         let delete_files_callback = move || {
-            if let Some(_ui) = ui_weak.upgrade() {
-                // 获取搜索结果的Rust数据结构
+            if let Some(ui) = ui_weak.upgrade() {
+                // 获取选中的文件
                 let mut files = Vec::new();
+                let mut indices_to_remove = Vec::new();
+                
                 for i in 0..search_results.row_count() {
                     if let Some(file_info) = search_results.row_data(i) {
-                        files.push(SingleFileInformations {
-                            path: PathBuf::from(file_info.path.as_str()),
-                            name: file_info.name.as_str().to_string(),
-                            size: file_info.size as u64,
-                            time: file_info.time as u64,
-                            hash: file_info.hash.as_str().to_string(),
-                        });
+                        if file_info.selected {  // 只处理已选中的文件
+                            files.push(SingleFileInformations {
+                                path: PathBuf::from(file_info.path.as_str()),
+                                name: file_info.name.as_str().to_string(),
+                                size: file_info.size as u64,
+                                time: file_info.time as u64,
+                                hash: file_info.hash.as_str().to_string(),
+                            });
+                            indices_to_remove.push(i);
+                        }
                     }
                 }
-                  // 确认删除
-                let confirm = DialogBuilder::message()
-                    .set_level(MessageLevel::Warning)
+                
+                // 检查是否有选中的文件
+                if files.is_empty() {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
+                        .set_title("提示")
+                        .set_text("请先选择要删除的文件！")
+                        .show_alert()
+                        .unwrap();
+                    return;
+                }
+                
+                // 确认删除
+                let confirm = MessageDialog::new()
+                    .set_type(MessageType::Warning)
                     .set_title("确认删除")
-                    .set_text(&format!("确定要删除这 {} 个文件吗？此操作不可恢复！", files.len()))
-                    .confirm()
-                    .show()
+                    .set_text(&format!("确定要删除选中的 {} 个文件吗？此操作不可恢复！", files.len()))
+                    .show_confirm()
                     .unwrap_or(false);
                 
                 if confirm {
                     // 使用SearchHelper删除文件
-                    match SearchHelper::delete_files(&files) {                        Ok(_) => {
-                            DialogBuilder::message()
-                                .set_level(MessageLevel::Info)
+                    match SearchHelper::delete_files(&files) {
+                        Ok(_) => {
+                            MessageDialog::new()
+                                .set_type(MessageType::Info)
                                 .set_title("删除成功")
                                 .set_text(&format!("成功删除 {} 个文件", files.len()))
-                                .alert()
-                                .show()
+                                .show_alert()
                                 .unwrap();
                                 
-                            // 清空搜索结果
-                            while search_results.row_count() > 0 {
-                                search_results.remove(0);
+                            // 从搜索结果中移除已删除的文件
+                            // 从后向前移除，避免索引问题
+                            indices_to_remove.sort_by(|a, b| b.cmp(a));
+                            for index in indices_to_remove {
+                                search_results.remove(index);
                             }
-                        },                        Err(e) => {
-                            DialogBuilder::message()
-                                .set_level(MessageLevel::Error)
+                            
+                            // 更新UI显示
+                            let mut file_infos = Vec::new();
+                            for i in 0..search_results.row_count() {
+                                if let Some(info) = search_results.row_data(i) {
+                                    file_infos.push(info);
+                                }
+                            }
+                            ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+                        },
+                        Err(e) => {
+                            MessageDialog::new()
+                                .set_type(MessageType::Error)
                                 .set_title("删除失败")
                                 .set_text(&format!("删除文件时出错: {}", e))
-                                .alert()
-                                .show()
+                                .show_alert()
                                 .unwrap();
                         }
                     }
@@ -674,33 +886,32 @@ impl UIHandler {    /// 创建新的UI处理器
         let search_results = self.search_results.inner.clone();
         let selected_paths = self.selected_paths.clone();
         let map_files_callback = move || {
-            if let Some(_ui) = ui_weak.upgrade() {                if search_results.row_count() == 0 {
-                    DialogBuilder::message()
-                        .set_level(MessageLevel::Info)
+            if let Some(_ui) = ui_weak.upgrade() {
+                if search_results.row_count() == 0 {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
                         .set_title("提示")
                         .set_text("没有搜索结果可以进行映射！")
-                        .alert()
-                        .show()
+                        .show_alert()
                         .unwrap();
                     return;
                 }
-                  if selected_paths.row_count() == 0 {
-                    DialogBuilder::message()
-                        .set_level(MessageLevel::Info)
+                
+                if selected_paths.row_count() == 0 {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
                         .set_title("提示")
-                        .set_text("请先选择一个源文件夹！")
-                        .alert()
-                        .show()
+                        .set_text("请先设置一个目标文件夹！")
+                        .show_alert()
                         .unwrap();
                     return;
                 }
-                  // 弹出选择目标文件夹的对话框
-                let result = DialogBuilder::file()
-                    .open_single_dir()
-                    .show();
+                
+                // 弹出选择目标文件夹的对话框
+                let result = FileDialog::new().show_open_single_dir();
                 match result {
                     Ok(Some(dest_path)) => {
-                        // 获取源路径
+                        // 获取目标文件夹路径
                         if let Some(source_path) = selected_paths.row_data(0) {
                             // 获取搜索结果
                             let mut files = Vec::new();
@@ -717,26 +928,26 @@ impl UIHandler {    /// 创建新的UI处理器
                             }
                             
                             // 使用SearchHelper执行映射
-                            let source = PathBuf::from(source_path.as_str());                            SearchHelper::map_files(&files, &source, &dest_path);
+                            let target = PathBuf::from(source_path.as_str());
+                            SearchHelper::map_files(&files, &target, &dest_path);
                             
-                            DialogBuilder::message()
-                                .set_level(MessageLevel::Info)
+                            MessageDialog::new()
+                                .set_type(MessageType::Info)
                                 .set_title("映射完成")
                                 .set_text(&format!("成功映射 {} 个文件到 {}", files.len(), dest_path.to_string_lossy()))
-                                .alert()
-                                .show()
+                                .show_alert()
                                 .unwrap();
                         }
                     },
                     Ok(None) => {
                         // 用户取消了选择
-                    },                    Err(e) => {
-                        DialogBuilder::message()
-                            .set_level(MessageLevel::Error)
+                    },
+                    Err(e) => {
+                        MessageDialog::new()
+                            .set_type(MessageType::Error)
                             .set_title("错误")
                             .set_text(&format!("文件夹选择对话框错误: {}", e))
-                            .alert()
-                            .show()
+                            .show_alert()
                             .unwrap();
                     }
                 }
@@ -761,22 +972,23 @@ impl UIHandler {    /// 创建新的UI处理器
                         });
                     }
                 }
-                  if files.is_empty() {
-                    DialogBuilder::message()
-                        .set_level(MessageLevel::Info)
+                
+                if files.is_empty() {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
                         .set_title("提示")
                         .set_text("没有搜索结果可以进行去重！")
-                        .alert()
-                        .show()
+                        .show_alert()
                         .unwrap();
                     return;
                 }
-                  if files[0].hash.is_empty() {
-                    DialogBuilder::message()
-                        .set_level(MessageLevel::Info)
+                
+                if files[0].hash.is_empty() {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
                         .set_title("提示")
                         .set_text("搜索结果中没有哈希值，请在过滤设置中启用'记录哈希值'选项！")
-                        .alert()                        .show()
+                        .show_alert()
                         .unwrap();
                     return;
                 }
@@ -802,17 +1014,15 @@ impl UIHandler {    /// 创建新的UI处理器
                     search_results.push(file_info.clone());
                     file_infos.push(file_info);
                 }
-                  // 使用from_slice方法直接更新UI中的搜索结果
+                
+                // 使用from_slice方法直接更新UI中的搜索结果
                 _ui.set_search_results(slint::VecModel::from_slice(&file_infos));
                 
-                // 重置选择数量为0（去重后默认不选中）
-                _ui.set_selected_count(0);
-                  DialogBuilder::message()
-                    .set_level(MessageLevel::Info)
+                MessageDialog::new()
+                    .set_type(MessageType::Info)
                     .set_title("去重完成")
                     .set_text(&format!("原有 {} 个文件，去重后剩余 {} 个文件", original_count, unique_count))
-                    .alert()
-                    .show()
+                    .show_alert()
                     .unwrap();
             }
         };
@@ -851,24 +1061,23 @@ impl UIHandler {    /// 创建新的UI处理器
         let ui_weak = self.ui.as_weak();
         let search_results = self.search_results.inner.clone();
         let export_callback = move || {
-            if let Some(_ui) = ui_weak.upgrade() {                // 检查是否有搜索结果
+            if let Some(_ui) = ui_weak.upgrade() {
+                // 检查是否有搜索结果
                 if search_results.row_count() == 0 {
-                    DialogBuilder::message()
-                        .set_level(MessageLevel::Info)
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
                         .set_title("提示")
                         .set_text("没有搜索结果可以导出！")
-                        .alert()
-                        .show()
+                        .show_alert()
                         .unwrap();
                     return;
                 }
-                  // 弹出文件保存对话框
-                let result = DialogBuilder::file()
-                    .set_filename("search_results.json")
-                    .save_single_file()
-                    .show();
                 
-                if let Ok(Some(file_path)) = result {
+                // 弹出文件保存对话框
+                let dialog = FileDialog::new()
+                    .set_filename("search_results.json");
+                
+                if let Ok(Some(file_path)) = dialog.show_save_single_file() {
                     // 获取搜索结果
                     let mut files = Vec::new();
                     for i in 0..search_results.row_count() {
@@ -884,22 +1093,21 @@ impl UIHandler {    /// 创建新的UI处理器
                     }
                     
                     // 使用SearchHelper导出结果
-                    match SearchHelper::export_results(&files, Some(file_path.to_str().unwrap())) {                        Ok(_) => {
-                            DialogBuilder::message()
-                                .set_level(MessageLevel::Info)
+                    match SearchHelper::export_results(&files, Some(file_path.to_str().unwrap())) {
+                        Ok(_) => {
+                            MessageDialog::new()
+                                .set_type(MessageType::Info)
                                 .set_title("导出成功")
                                 .set_text(&format!("成功导出 {} 个搜索结果", files.len()))
-                                .alert()
-                                .show()
+                                .show_alert()
                                 .unwrap();
                         },
                         Err(e) => {
-                            DialogBuilder::message()
-                                .set_level(MessageLevel::Error)
+                            MessageDialog::new()
+                                .set_type(MessageType::Error)
                                 .set_title("导出失败")
                                 .set_text(&format!("导出结果时出错: {}", e))
-                                .alert()
-                                .show()
+                                .show_alert()
                                 .unwrap();
                         }
                     }
@@ -915,7 +1123,8 @@ impl UIHandler {    /// 创建新的UI处理器
                 if let Some(mut file_info) = search_results.row_data(index as usize) {
                     file_info.selected = selected;
                     search_results.set_row_data(index as usize, file_info);
-                      // 计算已选择的数量并打印
+                    
+                    // 计算已选择的数量并打印
                     let mut selected_count = 0;
                     for i in 0..search_results.row_count() {
                         if let Some(info) = search_results.row_data(i) {
@@ -926,7 +1135,18 @@ impl UIHandler {    /// 创建新的UI处理器
                     }
                     println!("已选择 {}/{} 个文件", selected_count, search_results.row_count());
                     
-                    // 更新选择数量到UI
+                    // 打印当前选中的文件列表
+                    let mut selected_files = Vec::new();
+                    for i in 0..search_results.row_count() {
+                        if let Some(file_info) = search_results.row_data(i) {
+                            if file_info.selected {
+                                selected_files.push(file_info.path.as_str().to_string());
+                            }
+                        }
+                    }
+                    println!("当前选中的文件: {:?}", selected_files);
+                    
+                    // 更新UI中的选中计数
                     ui.set_selected_count(selected_count);
                     
                     // 转换为Vec后再更新UI
@@ -955,17 +1175,27 @@ impl UIHandler {    /// 创建新的UI处理器
                         file_infos.push(info);
                     }
                 }
-                  // 更新UI
-                ui.set_search_results(slint::VecModel::from_slice(&file_infos));
                 
-                // 更新选择数量到UI
-                let selected_count = if selected { search_results.row_count() } else { 0 };
-                ui.set_selected_count(selected_count as i32);
+                // 更新UI
+                ui.set_search_results(slint::VecModel::from_slice(&file_infos));
                 
                 println!("{}全选 {} 个文件", 
                     if selected { "" } else { "取消" }, 
                     search_results.row_count()
                 );
+                
+                // 如果是全选，打印所有文件路径
+                if selected {
+                    let mut selected_files = Vec::new();
+                    for i in 0..search_results.row_count() {
+                        if let Some(file_info) = search_results.row_data(i) {
+                            selected_files.push(file_info.path.as_str().to_string());
+                        }
+                    }
+                    println!("当前选中的文件: {:?}", selected_files);
+                } else {
+                    println!("当前选中的文件: []");
+                }
             }
         };
 
@@ -974,6 +1204,8 @@ impl UIHandler {    /// 创建新的UI处理器
         self.ui.on_handle_import_results(import_callback);
         self.ui.on_handle_export_results(export_callback);
         self.ui.on_handle_select_folder(select_folder_callback);
+        self.ui.on_handle_move_selected_files(move_files_callback);
+        self.ui.on_handle_copy_selected_files(copy_files_callback);
         self.ui.on_handle_delete_selected_files(delete_files_callback);
         self.ui.on_handle_map_files(map_files_callback);
         self.ui.on_handle_remove_duplicates(remove_duplicates_callback);
@@ -986,10 +1218,8 @@ impl UIHandler {    /// 创建新的UI处理器
         for i in 0..self.search_results.inner.row_count() {
             if let Some(info) = self.search_results.inner.row_data(i) {
                 file_infos.push(info);            }
-        }          self.ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+        }
+          self.ui.set_search_results(slint::VecModel::from_slice(&file_infos));
         self.ui.set_selected_paths(self.selected_paths.clone().into());
-        
-        // 初始化选择数量为0
-        self.ui.set_selected_count(0);
     }
 }

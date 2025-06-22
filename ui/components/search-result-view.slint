@@ -126,7 +126,7 @@ component ResultItem {
 // 搜索结果视图组件
 export component SearchResultView {
     in property<[FileInfo]> files;
-    in property<int> selected_count: 0; // 从 Rust 端传入的已选择文件数量
+    in-out property<int> selected_count: 0; // 已选择的文件数量
     callback item_double_clicked(FileInfo);
     callback item_selected_changed(int, bool); // 添加条目选择状态变化的回调
     callback select_all(bool); // 添加全选/取消全选回调
@@ -268,11 +268,14 @@ export component SearchResultView {
                 Rectangle {
                     height: files.length > 0 ? 30px : 0px;
                     visible: files.length > 0;
-                      HorizontalLayout {
+                    
+                    HorizontalLayout {
                         padding: 5px;
                         
+                        // 使用组件的选中计数
+                        
                         Text {
-                            text: "已选择: " + (root.selected_count > 0 ? root.selected_count : 0) + "/" + files.length;
+                            text: "已选择: " + root.selected_count + "/" + files.length;
                             color: #666;
                             font-size: 12px;
                             vertical-alignment: center;

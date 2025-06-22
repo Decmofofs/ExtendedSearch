@@ -14,15 +14,18 @@ export component AppWindow inherits Window {
     callback remove_selected();
     callback directory_toggled(int);
     callback filter_changed(FilterData);
-      // 搜索结果和路径
+    
+    // 搜索结果和路径
     in-out property<[FileInfo]> search_results;
     in-out property<[string]> selected_paths;
-    in-out property<int> selected_count: 0; // 已选择的文件数量
+    in-out property<int> selected_count: 0;
       // 处理搜索相关回调
     callback handle_search_clicked();
     callback handle_import_results();
     callback handle_export_results();
     callback handle_select_folder();
+    callback handle_move_selected_files(); // 新增移动选中文件回调
+    callback handle_copy_selected_files(); // 新增复制选中文件回调
     callback handle_delete_selected_files();
     callback handle_map_files();
     callback handle_remove_duplicates();
@@ -43,7 +46,7 @@ export component AppWindow inherits Window {
             saved_filter_data: root.saved_filter_data; // 传递保存的过滤器设置
             search_results <=> root.search_results;
             selected_paths <=> root.selected_paths;
-            selected_count <=> root.selected_count; // 传递选择数量
+            selected_count <=> root.selected_count;
             
             add_directory => { root.add_directory(); }
             remove_selected => { root.remove_selected(); }
@@ -58,6 +61,8 @@ export component AppWindow inherits Window {
             import_results => { root.handle_import_results(); }
             export_results => { root.handle_export_results(); }
             select_folder => { root.handle_select_folder(); }
+            move_selected_files => { root.handle_move_selected_files(); } // 新增移动选中文件回调映射
+            copy_selected_files => { root.handle_copy_selected_files(); } // 新增复制选中文件回调映射
             delete_selected_files => { root.handle_delete_selected_files(); }
             map_files => { root.handle_map_files(); }
             remove_duplicates => { root.handle_remove_duplicates(); }            open_folder(path) => { root.handle_open_folder(path); }
@@ -70,7 +75,7 @@ export component AppWindow inherits Window {
     
     title: "Extended Search";
     icon: @image-url("../assets/icons/main_icon.png");
-    preferred-width: 1000px;
+    preferred-width: 1400px;
     preferred-height: 900px;
     min-width: 600px;
     min-height: 400px;
