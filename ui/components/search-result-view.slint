@@ -20,35 +20,57 @@ component ResultItem {
     width: 100%;
     
     VerticalLayout {
-        Rectangle {
-            background: touch.has-hover ? #f0f0f0 : transparent;
+        item-rect := Rectangle {
+            background: row-touch.has-hover ? #f0f0f0 : transparent;
             width: 100%;
             
+            // 首先添加整行的触摸区域（最低层级）
+            row-touch := TouchArea {
+                z: 0; // 确保这是最低层级
+                width: parent.width;
+                height: parent.height;
+                
+                // 整行的单击选择
+                clicked => {
+                    root.selected_changed(!file.selected);
+                }
+                
+                // 双击打开文件夹
+                double-clicked => {
+                    root.double_clicked();
+                }
+            }
+            
             HorizontalLayout {
+                z: 1; // 内容在触摸区域之上
                 width: 100%;
                 padding: 8px;
                 spacing: 10px;
                 
                 // 复选框
-                Rectangle {
-                    width: 20px;
-                    height: 20px;
-                    border-radius: 2px;
-                    border-color: file.selected ? #007bff : #aaa;
+                checkbox := Rectangle {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 4px;
+                    border-color: checkbox-touch.has-hover || file.selected ? #007bff : #aaa;
                     border-width: 1px;
                     background: file.selected ? #007bff : white;
                     
-                    // 复选框勾选标记
-                    Path {
+                    // 复选框勾选标记（使用更好看的Unicode符号）
+                    Text {
+                        text: "✓";
+                        color: white;
+                        font-size: 16px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
                         visible: file.selected;
-                        stroke-width: 0;
-                        fill: white;
-                        commands: "M 5,10 L 8,14 L 15,5";
                     }
                     
-                    // 复选框点击区域
-                    TouchArea {
+                    // 复选框点击区域（最高层级）
+                    checkbox-touch := TouchArea {
+                        z: 2; // 确保复选框的触摸区域在最上层
                         clicked => {
+                            // 停止事件传播，阻止行点击事件触发
                             root.selected_changed(!file.selected);
                         }
                     }
@@ -79,56 +101,11 @@ component ResultItem {
                 }
                 
                 // 文件路径
-                Text {
-                    text: file.path;
+                Text {                    text: file.path;
                     color: #666;
                     vertical-alignment: center;
                     overflow: elide;
                     horizontal-stretch: 1;
-                }
-            }            // 整行区域用于双击打开文件夹
-            touch := TouchArea {
-                width: parent.width;
-                height: parent.height;
-                
-                // 双击打开文件夹
-                double-clicked => {
-                    root.double_clicked();
-                }
-                
-                // 单击用于选择，点击行的任意位置都能选择文件
-                clicked => {
-                    // 如果点击在复选框上，不重复处理
-                    if (self.pressed-x < 30px) {
-                        return;
-                    }
-                    root.selected_changed(!file.selected);
-                }
-            }
-            
-            // 添加一个行尾的操作按钮来明确表示可以切换选择
-            Rectangle {
-                x: parent.width - 30px;
-                width: 24px;
-                height: 24px;
-                y: (parent.height - self.height) / 2; // 垂直居中
-                border-radius: 4px;
-                background: select-touch.has-hover ? #f0f0f0 : transparent;
-                
-                // 勾选图标
-                Text {
-                    text: file.selected ? "☑" : "☐";
-                    color: file.selected ? #007bff : #666;
-                    font-size: 16px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-                
-                select-touch := TouchArea {
-                    clicked => {
-                        // 明确的选择切换按钮
-                        root.selected_changed(!file.selected);
-                    }
                 }
             }
         }
@@ -172,28 +149,29 @@ export component SearchResultView {
                     height: 40px;                    HorizontalLayout {
                         padding: 8px;
                         spacing: 10px;
-                        
-                        // 全选复选框
+                          // 全选复选框
                         Rectangle {
-                            width: 20px;
-                            height: 20px;
-                            border-radius: 2px;
-                            border-color: select_all_checked ? #007bff : #aaa;
+                            width: 24px;
+                            height: 24px;
+                            border-radius: 4px;
+                            border-color: checkbox-touch.has-hover || select_all_checked ? #007bff : #aaa;
                             border-width: 1px;
                             background: select_all_checked ? #007bff : white;
                             
                             property <bool> select_all_checked: false;
                             
                             // 勾选标记
-                            Path {
+                            Text {
+                                text: "✓";
+                                color: white;
+                                font-size: 16px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
                                 visible: select_all_checked;
-                                stroke-width: 0;
-                                fill: white;
-                                commands: "M 5,10 L 8,14 L 15,5";
                             }
                             
                             // 点击区域
-                            TouchArea {
+                            checkbox-touch := TouchArea {
                                 clicked => {
                                     parent.select_all_checked = !parent.select_all_checked;
                                     root.select_all(parent.select_all_checked);
