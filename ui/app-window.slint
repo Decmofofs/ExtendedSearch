@@ -18,8 +18,7 @@ export component AppWindow inherits Window {
     // 搜索结果和路径
     in-out property<[FileInfo]> search_results;
     in-out property<[string]> selected_paths;
-    
-    // 处理搜索相关回调
+      // 处理搜索相关回调
     callback handle_search_clicked();
     callback handle_import_results();
     callback handle_export_results();
@@ -28,6 +27,10 @@ export component AppWindow inherits Window {
     callback handle_map_files();
     callback handle_remove_duplicates();
     callback handle_open_folder(string);
+    
+    // 搜索结果项选择回调
+    callback item_selected_changed(int, bool);
+    callback select_all(bool);
     
     HorizontalLayout {
         spacing: 0px;
@@ -56,8 +59,11 @@ export component AppWindow inherits Window {
             select_folder => { root.handle_select_folder(); }
             delete_selected_files => { root.handle_delete_selected_files(); }
             map_files => { root.handle_map_files(); }
-            remove_duplicates => { root.handle_remove_duplicates(); }
-            open_folder(path) => { root.handle_open_folder(path); }
+            remove_duplicates => { root.handle_remove_duplicates(); }            open_folder(path) => { root.handle_open_folder(path); }
+            
+            // 搜索结果选择回调
+            item_selected_changed(index, selected) => { root.item_selected_changed(index, selected); }
+            select_all(selected) => { root.select_all(selected); }
         }
     }
     

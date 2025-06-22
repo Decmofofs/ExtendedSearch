@@ -7,12 +7,14 @@ export struct FileInfo {
     size: int,
     time: int,
     hash: string,
+    selected: bool,
 }
 
 // 搜索结果项组件
 component ResultItem {
     in property<FileInfo> file;
     callback double_clicked();
+    callback selected_changed(bool);
     
     height: 50px;
     width: 100%;
@@ -27,12 +29,37 @@ component ResultItem {
                 padding: 8px;
                 spacing: 10px;
                 
+                // 复选框
+                Rectangle {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 2px;
+                    border-color: file.selected ? #007bff : #aaa;
+                    border-width: 1px;
+                    background: file.selected ? #007bff : white;
+                    
+                    // 复选框勾选标记
+                    Path {
+                        visible: file.selected;
+                        stroke-width: 0;
+                        fill: white;
+                        commands: "M 5,10 L 8,14 L 15,5";
+                    }
+                    
+                    // 复选框点击区域
+                    TouchArea {
+                        clicked => {
+                            root.selected_changed(!file.selected);
+                        }
+                    }
+                }
+                
                 // 文件名
                 Text {
                     text: file.name;
                     font-weight: 500;
                     vertical-alignment: center;
-                    width: 200px;
+                    width: 180px; // 调整宽度以适应复选框
                     overflow: elide;
                 }
                 
@@ -59,11 +86,49 @@ component ResultItem {
                     overflow: elide;
                     horizontal-stretch: 1;
                 }
-            }
-            
+            }            // 整行区域用于双击打开文件夹
             touch := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                
+                // 双击打开文件夹
                 double-clicked => {
                     root.double_clicked();
+                }
+                
+                // 单击用于选择，点击行的任意位置都能选择文件
+                clicked => {
+                    // 如果点击在复选框上，不重复处理
+                    if (self.pressed-x < 30px) {
+                        return;
+                    }
+                    root.selected_changed(!file.selected);
+                }
+            }
+            
+            // 添加一个行尾的操作按钮来明确表示可以切换选择
+            Rectangle {
+                x: parent.width - 30px;
+                width: 24px;
+                height: 24px;
+                y: (parent.height - self.height) / 2; // 垂直居中
+                border-radius: 4px;
+                background: select-touch.has-hover ? #f0f0f0 : transparent;
+                
+                // 勾选图标
+                Text {
+                    text: file.selected ? "☑" : "☐";
+                    color: file.selected ? #007bff : #666;
+                    font-size: 16px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                
+                select-touch := TouchArea {
+                    clicked => {
+                        // 明确的选择切换按钮
+                        root.selected_changed(!file.selected);
+                    }
                 }
             }
         }
@@ -80,6 +145,8 @@ component ResultItem {
 export component SearchResultView {
     in property<[FileInfo]> files;
     callback item_double_clicked(FileInfo);
+    callback item_selected_changed(int, bool); // 添加条目选择状态变化的回调
+    callback select_all(bool); // 添加全选/取消全选回调
     width: 100%;
     height: 100%;
     
@@ -102,16 +169,43 @@ export component SearchResultView {
                 spacing: 0px;
                 // 表头内容
                 Rectangle {
-                    height: 40px;
-                    HorizontalLayout {
+                    height: 40px;                    HorizontalLayout {
                         padding: 8px;
                         spacing: 10px;
+                        
+                        // 全选复选框
+                        Rectangle {
+                            width: 20px;
+                            height: 20px;
+                            border-radius: 2px;
+                            border-color: select_all_checked ? #007bff : #aaa;
+                            border-width: 1px;
+                            background: select_all_checked ? #007bff : white;
+                            
+                            property <bool> select_all_checked: false;
+                            
+                            // 勾选标记
+                            Path {
+                                visible: select_all_checked;
+                                stroke-width: 0;
+                                fill: white;
+                                commands: "M 5,10 L 8,14 L 15,5";
+                            }
+                            
+                            // 点击区域
+                            TouchArea {
+                                clicked => {
+                                    parent.select_all_checked = !parent.select_all_checked;
+                                    root.select_all(parent.select_all_checked);
+                                }
+                            }
+                        }
                         
                         Text {
                             text: "名称";
                             font-weight: 700;
                             vertical-alignment: center;
-                            width: 200px;
+                            width: 180px;
                         }
                         
                         Text {
@@ -160,12 +254,18 @@ export component SearchResultView {
                     text: files.length <= 0 ? "空" : files.length + "";
                     color: transparent;
                 }
-                
-                // 列表项
-                for file in files: ResultItem {
+                  // 列表项
+                for file[index] in files: ResultItem {
                     file: file;
+                    
+                    // 双击条目
                     double_clicked => {
                         root.item_double_clicked(file);
+                    }
+                    
+                    // 选择状态改变
+                    selected_changed(selected) => {
+                        root.item_selected_changed(index, selected);
                     }
                 }
                   // 如果没有结果，显示一个提示
@@ -180,11 +280,24 @@ export component SearchResultView {
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }
-                }
-                
-                // 底部额外空间，确保能够滚动到最后一个项
+                }                // 底部信息栏，显示选中项统计和额外空间
                 Rectangle {
-                    height: files.length > 0 ? 10px : 0px;
+                    height: files.length > 0 ? 30px : 0px;
+                    visible: files.length > 0;
+                    
+                    HorizontalLayout {
+                        padding: 5px;
+                        
+                        // 使用属性绑定来计算选中项的数量
+                        property <int> selected_count: 0; // 将在 Rust 端计算
+                        
+                        Text {
+                            text: "已选择: " + (parent.selected_count > 0 ? parent.selected_count : 0) + "/" + files.length;
+                            color: #666;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                        }
+                    }
                 }
             }
         }

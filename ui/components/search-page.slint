@@ -5,8 +5,7 @@ import { FileInfo, SearchResultView } from "./search-result-view.slint";
 export component SearchPage {
     in-out property<[FileInfo]> search_results: [];
     in-out property<[string]> selected_paths: [];
-    
-    // 回调函数
+      // 回调函数
     callback search_clicked();
     callback import_results();
     callback export_results();
@@ -15,6 +14,10 @@ export component SearchPage {
     callback map_files();
     callback remove_duplicates();
     callback open_folder(string);
+    
+    // 搜索结果选择回调
+    callback item_selected_changed(int, bool);
+    callback select_all(bool);
     
     width: 90%;
     height: 90%;
@@ -27,11 +30,22 @@ export component SearchPage {
         // 左侧区域 - 搜索结果显示区域
         results-area := Rectangle {
             width: 80%;
-            
-            SearchResultView {
+              SearchResultView {
                 files: root.search_results;
+                
+                // 双击文件项
                 item_double_clicked(file) => {
                     root.open_folder(file.path);
+                }
+                
+                // 选择状态变更
+                item_selected_changed(index, selected) => {
+                    root.item_selected_changed(index, selected);
+                }
+                
+                // 全选/取消全选
+                select_all(selected) => {
+                    root.select_all(selected);
                 }
             }
         }

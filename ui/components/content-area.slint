@@ -19,8 +19,7 @@ export component ContentArea {
     // 搜索相关属性
     in-out property<[FileInfo]> search_results;
     in-out property<[string]> selected_paths;
-    
-    // 搜索相关回调
+      // 搜索相关回调
     callback search_clicked();
     callback import_results();
     callback export_results();
@@ -29,6 +28,10 @@ export component ContentArea {
     callback map_files();
     callback remove_duplicates();
     callback open_folder(string);
+    
+    // 搜索结果选择回调
+    callback item_selected_changed(int, bool);
+    callback select_all(bool);
     
     Rectangle {
         background: #f5f5f5;
@@ -87,9 +90,17 @@ export component ContentArea {
             }
             remove_duplicates => {
                 root.remove_duplicates();
-            }
-            open_folder(path) => {
+            }            open_folder(path) => {
                 root.open_folder(path);
+            }
+            
+            // 选择相关回调
+            item_selected_changed(index, selected) => {
+                root.item_selected_changed(index, selected);
+            }
+            
+            select_all(selected) => {
+                root.select_all(selected);
             }
         }
 

@@ -26,8 +26,7 @@ impl SearchResultModel {
             self.inner.remove(0);
         }
     }
-    
-    // 添加搜索结果
+      // 添加搜索结果
     fn add_results(&self, results: &[SingleFileInformations]) {
         for file in results {
             let file_info = FileInfo {
@@ -36,6 +35,7 @@ impl SearchResultModel {
                 size: file.size as i32,
                 time: file.time as i32,
                 hash: file.hash.clone().into(),
+                selected: false, // 默认不选中
             };
             self.inner.push(file_info);
         }
@@ -471,6 +471,7 @@ impl UIHandler {    /// 创建新的UI处理器
                         size: file.size as i32,
                         time: file.time as i32,
                         hash: file.hash.clone().into(),
+                        selected: false, // 默认不选中
                     };
                     search_results.push(file_info);
                 }
@@ -502,8 +503,7 @@ impl UIHandler {    /// 创建新的UI处理器
                         match std::fs::read_to_string(&file_path) {
                             Ok(json_str) => {
                                 // 解析JSON为Vec<SingleFileInformations>
-                                match serde_json::from_str::<Vec<SingleFileInformations>>(&json_str) {
-                                    Ok(files) => {
+                                match serde_json::from_str::<Vec<SingleFileInformations>>(&json_str) {                                    Ok(files) => {
                                         // 清空之前的搜索结果
                                         while search_results.row_count() > 0 {
                                             search_results.remove(0);
@@ -516,6 +516,7 @@ impl UIHandler {    /// 创建新的UI处理器
                                                 size: file.size as i32,
                                                 time: file.time as i32,
                                                 hash: file.hash.clone().into(),
+                                                selected: false, // 默认不选中
                                             };
                                             search_results.push(file_info);
                                         }
@@ -784,14 +785,14 @@ impl UIHandler {    /// 创建新的UI处理器
                 while search_results.row_count() > 0 {
                     search_results.remove(0);
                 }
-                  let mut file_infos = Vec::new();
-                for file in &files {
+                  let mut file_infos = Vec::new();                for file in &files {
                     let file_info = FileInfo {
                         path: file.path.to_string_lossy().to_string().into(),
                         name: file.name.clone().into(),
                         size: file.size as i32,
                         time: file.time as i32,
                         hash: file.hash.clone().into(),
+                        selected: false, // 默认不选中
                     };
                     search_results.push(file_info.clone());
                     file_infos.push(file_info);
@@ -896,7 +897,64 @@ impl UIHandler {    /// 创建新的UI处理器
                 }
             }
         };
+          // 8. 文件项选择状态变化回调
+        let ui_weak = self.ui.as_weak();
+        let search_results = self.search_results.inner.clone();
+        let item_selected_changed = move |index: i32, selected: bool| {
+            if let Some(ui) = ui_weak.upgrade() {
+                // 更新指定索引的文件选择状态
+                if let Some(mut file_info) = search_results.row_data(index as usize) {
+                    file_info.selected = selected;
+                    search_results.set_row_data(index as usize, file_info);
+                    
+                    // 计算已选择的数量并打印
+                    let mut selected_count = 0;
+                    for i in 0..search_results.row_count() {
+                        if let Some(info) = search_results.row_data(i) {
+                            if info.selected {
+                                selected_count += 1;
+                            }
+                        }
+                    }
+                    println!("已选择 {}/{} 个文件", selected_count, search_results.row_count());
+                    
+                    // 转换为Vec后再更新UI
+                    let mut file_infos = Vec::new();
+                    for i in 0..search_results.row_count() {
+                        if let Some(info) = search_results.row_data(i) {
+                            file_infos.push(info);
+                        }
+                    }
+                    ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+                }
+            }
+        };
         
+        // 9. 全选/取消全选回调
+        let ui_weak = self.ui.as_weak();
+        let search_results = self.search_results.inner.clone();
+        let select_all = move |selected: bool| {
+            if let Some(ui) = ui_weak.upgrade() {
+                // 更新所有文件的选择状态
+                let mut file_infos = Vec::new();
+                for i in 0..search_results.row_count() {
+                    if let Some(mut info) = search_results.row_data(i) {
+                        info.selected = selected;
+                        search_results.set_row_data(i, info.clone());
+                        file_infos.push(info);
+                    }
+                }
+                
+                // 更新UI
+                ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+                
+                println!("{}全选 {} 个文件", 
+                    if selected { "" } else { "取消" }, 
+                    search_results.row_count()
+                );
+            }
+        };
+
         // 通过全局接口暴露回调
         self.ui.on_handle_search_clicked(search_callback);
         self.ui.on_handle_import_results(import_callback);
@@ -906,15 +964,16 @@ impl UIHandler {    /// 创建新的UI处理器
         self.ui.on_handle_map_files(map_files_callback);
         self.ui.on_handle_remove_duplicates(remove_duplicates_callback);
         self.ui.on_handle_open_folder(open_folder_callback);
+        self.ui.on_item_selected_changed(item_selected_changed);
+        self.ui.on_select_all(select_all);
           // 设置初始数据绑定
         // 先将search_results模型转换为Vec，然后再创建一个新的VecModel
         let mut file_infos = Vec::new();
         for i in 0..self.search_results.inner.row_count() {
             if let Some(info) = self.search_results.inner.row_data(i) {
-                file_infos.push(info);
-            }
+                file_infos.push(info);            }
         }
-        self.ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+          self.ui.set_search_results(slint::VecModel::from_slice(&file_infos));
         self.ui.set_selected_paths(self.selected_paths.clone().into());
     }
 }
