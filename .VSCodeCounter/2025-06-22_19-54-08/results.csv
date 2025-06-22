@@ -1,0 +1,15 @@
+"filename", "language", "Rust", "Slint", "comment", "blank", "total"
+"d:\WorkSpace\RSProject\ExtendedSearch\build.rs", "Rust", 28, 0, 5, 6, 39
+"d:\WorkSpace\RSProject\ExtendedSearch\src\filter.rs", "Rust", 96, 0, 15, 13, 124
+"d:\WorkSpace\RSProject\ExtendedSearch\src\main.rs", "Rust", 12, 0, 4, 8, 24
+"d:\WorkSpace\RSProject\ExtendedSearch\src\search_file\mod.rs", "Rust", 223, 0, 48, 36, 307
+"d:\WorkSpace\RSProject\ExtendedSearch\src\search_file\settings.rs", "Rust", 159, 0, 18, 20, 197
+"d:\WorkSpace\RSProject\ExtendedSearch\src\ui_handler.rs", "Rust", 253, 0, 33, 34, 320
+"d:\WorkSpace\RSProject\ExtendedSearch\ui\app-window.slint", "Slint", 0, 38, 1, 4, 43
+"d:\WorkSpace\RSProject\ExtendedSearch\ui\components\content-area.slint", "Slint", 0, 62, 3, 9, 74
+"d:\WorkSpace\RSProject\ExtendedSearch\ui\components\custom-button.slint", "Slint", 0, 39, 1, 6, 46
+"d:\WorkSpace\RSProject\ExtendedSearch\ui\components\filter-settings-optimized.slint", "Slint", 0, 379, 34, 58, 471
+"d:\WorkSpace\RSProject\ExtendedSearch\ui\components\filter-settings.slint", "Slint", 0, 342, 27, 56, 425
+"d:\WorkSpace\RSProject\ExtendedSearch\ui\components\scope-selection.slint", "Slint", 0, 98, 7, 18, 123
+"d:\WorkSpace\RSProject\ExtendedSearch\ui\components\sidebar.slint", "Slint", 0, 34, 2, 7, 43
+"Total", "-", 771, 992, 198, 275, 2236

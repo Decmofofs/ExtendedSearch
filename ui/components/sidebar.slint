@@ -1,0 +1,36 @@
+import { CustomButton } from "custom-button.slint";
+
+export component Sidebar {
+    in-out property<int> selected: 0;
+    
+    VerticalLayout {
+        spacing: 8px;
+        padding: 10px;
+        width: 100%;
+        height: 100%;
+        
+        for item[index] in ["范围选择", "过滤设置", "搜索!"]: CustomButton {
+            text: item;
+            selected: root.selected == index;
+            clicked => { 
+                root.selected = index; 
+            }
+        }
+        
+        // 添加一些垂直间距
+        Rectangle {
+            // 这个Rectangle会占据剩余的所有空间，将下面的按钮推到底部
+            min-height: 20px;
+        }
+        
+
+
+        CustomButton {
+            text: "软件设置";
+            selected: root.selected == 4;
+            clicked => {
+                root.selected = 4;
+            }
+        }
+    }
+}

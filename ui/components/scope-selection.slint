@@ -1,0 +1,122 @@
+import { Button, ScrollView } from "std-widgets.slint";
+
+// 目录项结构
+export struct DirectoryItem {
+    path: string,
+    selected: bool,
+}
+
+// 范围选择组件
+export component ScopeSelection {
+    in-out property<[DirectoryItem]> directories;
+    callback add_directory();
+    callback remove_selected();
+    callback directory_toggled(int);
+    
+    width: 80%;
+    height: 80%;
+    
+    VerticalLayout {
+        spacing: 5px;
+        padding: 10px;
+
+        // 标题 - 固定高度
+        Text {
+            text: "选择搜索范围";
+            font-size: 18px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            height: 30px;
+            width: 100%;
+        }
+        
+        // 目录列表区域 - 使用显式的高度约束
+        Rectangle {
+            background: white;
+            border-width: 1px;
+            border-color: #ccc;
+            border-radius: 4px;
+            width: 100%;
+            min-height: 200px;  // 设置最小高度
+            
+            ScrollView {
+                VerticalLayout {
+                    spacing: 2px;
+                    padding: 10px;
+                    
+                    for directory[index] in root.directories: Rectangle {
+                        height: 35px;
+                        background: directory.selected ? #e3f2fd : transparent;
+                        border-radius: 2px;
+                        
+                        HorizontalLayout {
+                            spacing: 10px;
+                            padding-left: 10px;
+                            padding-right: 10px;
+                            
+                            // 复选框效果
+                            Rectangle {
+                                width: 18px;
+                                height: 18px;
+                                background: directory.selected ? #2196f3 : white;
+                                border-width: 2px;
+                                border-color: directory.selected ? #2196f3 : #ccc;
+                                border-radius: 2px;
+                                
+                                if directory.selected: Text {
+                                    text: "✓";
+                                    color: white;
+                                    font-size: 12px;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+                            
+                            // 路径文本
+                            Text {
+                                text: directory.path;
+                                vertical-alignment: center;
+                                color: #333;
+                            }
+                        }
+                        
+                        touch-area := TouchArea {
+                            clicked => {
+                                root.directory_toggled(index);
+                            }
+                            mouse-cursor: pointer;
+                        }
+                        
+                        states [
+                            hover when touch-area.has-hover: {
+                                background: directory.selected ? #bbdefb : #f5f5f5;
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+
+        // 操作按钮区域 - 固定高度
+        HorizontalLayout {
+            spacing: 10px;
+            height: 40px;
+            width: 100%;
+            
+            Button {
+                text: "添加目录";
+                clicked => {
+                    root.add_directory();
+                }
+            }
+            
+            Button {
+                text: "删除选中";
+                enabled: root.directories.length > 0;
+                clicked => {
+                    root.remove_selected();
+                }
+            }
+        }
+    }
+}

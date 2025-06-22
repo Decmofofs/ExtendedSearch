@@ -1,0 +1,135 @@
+import { CustomButton } from "custom-button.slint";
+import { FileInfo, SearchResultView } from "./search-result-view.slint";
+
+// 搜索页面组件
+export component SearchPage {
+    in-out property<[FileInfo]> search_results: [];
+    in-out property<[string]> selected_paths: [];
+    
+    // 回调函数
+    callback search_clicked();
+    callback import_results();
+    callback select_folder();
+    callback delete_selected_files();
+    callback map_files();
+    callback remove_duplicates();
+    callback open_folder(string);
+    
+    HorizontalLayout {
+        spacing: 10px;
+        padding: 10px;
+        
+        // 左侧区域 - 搜索结果显示区域
+        results-area := Rectangle {
+            width: 80%;
+            
+            SearchResultView {
+                files: root.search_results;
+                item_double_clicked(file) => {
+                    root.open_folder(file.path);
+                }
+            }
+        }
+        
+        // 右侧区域 - 功能区
+        Rectangle {
+            width: 20%;
+            
+            VerticalLayout {
+                spacing: 10px;
+                padding: 5px;
+                
+                // 搜索按钮
+                CustomButton {
+                    text: "开始搜索";
+                    clicked => {
+                        root.search_clicked();
+                    }
+                }
+                
+                // 导入按钮
+                CustomButton {
+                    text: "导入结果";
+                    clicked => {
+                        root.import_results();
+                    }
+                }
+                
+                // 占位区域
+                Rectangle {
+                    height: 20px;
+                }
+                
+                // 文件夹选择区域
+                VerticalLayout {
+                    spacing: 5px;
+                    
+                    CustomButton {
+                        text: "指定文件夹";
+                        clicked => {
+                            root.select_folder();
+                        }
+                    }
+                    
+                    // 已选择的路径显示区域
+                    Rectangle {
+                        border-width: 1px;
+                        border-color: #cccccc;
+                        border-radius: 4px;
+                        background: #f8f8f8;
+                        height: 80px;
+                        
+                        Flickable {
+                            width: 100%;
+                            height: 100%;
+                            viewport-height: path-list.preferred-height;
+                            
+                            path-list := VerticalLayout {
+                                padding: 5px;
+                                spacing: 2px;
+                                
+                                for path in root.selected_paths: Text {
+                                    text: path;
+                                    font-size: 12px;
+                                    overflow: elide;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 功能按钮区域
+                Rectangle {
+                    min-height: 20px;
+                    vertical-stretch: 1;
+                }
+                
+                // 底部功能按钮区域
+                VerticalLayout {
+                    spacing: 8px;
+                    
+                    CustomButton {
+                        text: "删除选中文件";
+                        clicked => {
+                            root.delete_selected_files();
+                        }
+                    }
+                    
+                    CustomButton {
+                        text: "映射";
+                        clicked => {
+                            root.map_files();
+                        }
+                    }
+                    
+                    CustomButton {
+                        text: "去重展示";
+                        clicked => {
+                            root.remove_duplicates();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

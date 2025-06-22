@@ -1,0 +1,68 @@
+import { Sidebar } from "components/sidebar.slint";
+import { ContentArea } from "components/content-area.slint";
+import { DirectoryItem } from "components/scope-selection.slint";
+import { FilterData } from "components/filter-settings.slint";
+import { FileInfo } from "components/search-result-view.slint";
+
+// 主应用程序组件
+export component AppWindow inherits Window {
+    property<int> selected_page: 0;
+    in-out property<[DirectoryItem]> directories;
+    in-out property<FilterData> saved_filter_data; // 保存的过滤器设置
+    property<FilterData> filter_data;
+    callback add_directory();
+    callback remove_selected();
+    callback directory_toggled(int);
+    callback filter_changed(FilterData);
+    
+    // 搜索结果和路径
+    in-out property<[FileInfo]> search_results;
+    in-out property<[string]> selected_paths;
+    
+    // 处理搜索相关回调
+    callback handle_search_clicked();
+    callback handle_import_results();
+    callback handle_select_folder();
+    callback handle_delete_selected_files();
+    callback handle_map_files();
+    callback handle_remove_duplicates();
+    callback handle_open_folder(string);
+    
+    HorizontalLayout {
+        spacing: 0px;
+        
+        sidebar := Sidebar {
+            selected <=> root.selected_page;
+            width: 200px;        }        content := ContentArea {
+            current_page: root.selected_page;
+            directories <=> root.directories;
+            saved_filter_data: root.saved_filter_data; // 传递保存的过滤器设置
+            search_results <=> root.search_results;
+            selected_paths <=> root.selected_paths;
+            
+            add_directory => { root.add_directory(); }
+            remove_selected => { root.remove_selected(); }
+            directory_toggled(index) => { root.directory_toggled(index); }
+            filter_changed(data) => { 
+                root.filter_data = data;
+                root.filter_changed(data); 
+            }
+            
+            // 搜索相关回调
+            search_clicked => { root.handle_search_clicked(); }
+            import_results => { root.handle_import_results(); }
+            select_folder => { root.handle_select_folder(); }
+            delete_selected_files => { root.handle_delete_selected_files(); }
+            map_files => { root.handle_map_files(); }
+            remove_duplicates => { root.handle_remove_duplicates(); }
+            open_folder(path) => { root.handle_open_folder(path); }
+        }
+    }
+    
+    title: "Extended Search";
+    icon: @image-url("../assets/icons/main_icon.png");
+    preferred-width: 1000px;
+    preferred-height: 900px;
+    min-width: 600px;
+    min-height: 400px;
+}

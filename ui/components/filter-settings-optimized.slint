@@ -1,0 +1,470 @@
+import { Button } from "std-widgets.slint";
+import { CheckBox } from "std-widgets.slint";
+import { LineEdit } from "std-widgets.slint";
+import { ComboBox } from "std-widgets.slint";
+import { SpinBox } from "std-widgets.slint";
+import { ScrollView } from "std-widgets.slint";
+import { GroupBox } from "std-widgets.slint";
+
+// 日期限制类型枚举
+export enum DateLimitType {
+    None,
+    Days,
+    Weeks,
+    Years,
+    Specific,
+}
+
+// 正则表达式匹配目标枚举
+export enum RegexTarget {
+    FileName,
+    FilePath,
+}
+
+// 过滤条件数据结构
+export struct FilterData {
+    // 基本选项
+    search_hidden_files: bool,
+    search_hidden_folders: bool,
+    search_readonly_files: bool,
+    
+    // 文件大小限制 (单位: MB)
+    min_file_size: int,
+    max_file_size: int,
+    
+    // 日期限制
+    date_limit_type: DateLimitType,
+    date_limit_value: int,  // 具体数值（天数/周数/年数）
+    specific_year: int,
+    specific_month: int,
+    specific_day: int,
+    
+    // 正则表达式
+    regex_pattern: string,
+    regex_target: RegexTarget,
+    
+    // 特殊选项
+    record_hash: bool,
+}
+
+// 优化的过滤条件设置组件 - 使用更简化的布局和懒加载
+export component FilterSettingsOptimized {
+    width: 90%;
+    height: 90%;
+    
+    // 基本选项属性
+    in-out property<bool> search_hidden_files: true;
+    in-out property<bool> search_hidden_folders: true;
+    in-out property<bool> search_readonly_files: true;
+    
+    // 文件大小限制属性
+    in-out property<int> min_file_size: 0;
+    in-out property<int> max_file_size: 65536; // 64MB
+      // 日期限制属性
+    in-out property<int> date_limit_type: 0; // 0=None, 1=Days, 2=Weeks, 3=Years, 4=Specific
+    in-out property<int> date_limit_value: 1;
+    in-out property<int> specific_year: 2025;
+    in-out property<int> specific_month: 6;
+    in-out property<int> specific_day: 22;
+      // 日期选择UI状态（与实际的date_limit_type分开）
+    property<int> date_ui_mode: 0; // 0=无限制, 1=输入完整日期, 2=快速选择
+    
+    // 强制重新渲染的标志
+    property<int> date_render_key: 0;
+    
+    // 正则表达式属性
+    in-out property<string> regex_pattern: "";
+    in-out property<int> regex_target: 0; // 0=FileName, 1=FilePath
+    
+    // 特殊选项属性
+    in-out property<bool> record_hash: false;
+    
+    // 控制是否显示详细设置
+    property<bool> show_advanced: false;
+    
+    // 回调函数
+    callback filter_changed();
+    callback reset_to_defaults();
+      // 获取过滤数据的方法
+    public function get_filter_data() -> FilterData {
+        return {
+            search_hidden_files: root.search_hidden_files,
+            search_hidden_folders: root.search_hidden_folders,
+            search_readonly_files: root.search_readonly_files,
+            min_file_size: root.min_file_size,
+            max_file_size: root.max_file_size,
+            date_limit_type: root.date_limit_type == 0 ? DateLimitType.None :
+                           root.date_limit_type == 1 ? DateLimitType.Days :
+                           root.date_limit_type == 2 ? DateLimitType.Weeks :
+                           root.date_limit_type == 3 ? DateLimitType.Years : DateLimitType.Specific,
+            date_limit_value: root.date_limit_value,
+            specific_year: root.specific_year,
+            specific_month: root.specific_month,
+            specific_day: root.specific_day,
+            regex_pattern: root.regex_pattern,
+            regex_target: root.regex_target == 0 ? RegexTarget.FileName : RegexTarget.FilePath,
+            record_hash: root.record_hash,
+        };
+    }
+    
+    // 根据date_limit_type同步UI模式
+    function sync_date_ui_mode() {
+        if (root.date_limit_type == 0) {
+            root.date_ui_mode = 0; // 无限制
+        } else if (root.date_limit_type == 4) {
+            root.date_ui_mode = 1; // 输入完整日期
+        } else if (root.date_limit_type == 1 || root.date_limit_type == 2 || root.date_limit_type == 3) {
+            root.date_ui_mode = 2; // 快速选择（已选择）
+        }
+    }    Rectangle {
+        background: #ffffff;
+        width: 100%;
+        height: 100%;
+        
+        // 初始化时同步UI状态
+        init => {
+            root.sync_date_ui_mode();
+        }
+        
+        ScrollView {
+            width: 100%;
+            height: 100%;
+            
+            VerticalLayout {
+                padding: 20px;
+                spacing: 20px;
+                alignment: start;
+            
+            // 标题
+            Text {
+                text: "设置过滤条件";
+                font-size: 20px;
+                font-weight: 700;
+                color: #333333;
+            }
+            
+            // 基本选项 - 始终可见
+            Rectangle {
+                width: 100%;
+                height: 120px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                
+                VerticalLayout {
+                    padding: 15px;
+                    spacing: 10px;
+                    
+                    Text {
+                        text: "基本选项";
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: #495057;
+                    }
+                    
+                    HorizontalLayout {
+                        spacing: 20px;
+                        
+                        CheckBox {
+                            text: "搜索隐藏文件";
+                            checked <=> root.search_hidden_files;
+                            toggled => { root.filter_changed(); }
+                        }
+                        
+                        CheckBox {
+                            text: "搜索隐藏文件夹";
+                            checked <=> root.search_hidden_folders;
+                            toggled => { root.filter_changed(); }
+                        }
+                        
+                        CheckBox {
+                            text: "搜索只读文件";
+                            checked <=> root.search_readonly_files;
+                            toggled => { root.filter_changed(); }
+                        }
+                    }
+                }
+            }
+            
+            // 显示/隐藏高级选项的按钮
+            Button {
+                text: root.show_advanced ? "隐藏高级选项" : "显示高级选项";
+                clicked => {
+                    root.show_advanced = !root.show_advanced;
+                }
+            }
+              // 高级选项 - 懒加载
+            if root.show_advanced: Rectangle {
+                width: 100%;
+                height: 500px;  // 增加高度以容纳日期设置
+                background: #f8f9fa;
+                border-radius: 8px;
+                
+                ScrollView {
+                    width: 100%;
+                    height: 100%;
+                    
+                    VerticalLayout {
+                        padding: 15px;
+                        spacing: 15px;
+                        
+                        // 文件大小限制
+                        Rectangle {
+                            width: 100%;
+                            height: 80px;
+                            background: #ffffff;
+                            border-radius: 6px;
+                            
+                            VerticalLayout {
+                                padding: 10px;
+                                spacing: 8px;
+                                
+                                Text {
+                                    text: "文件大小限制 (MB)";
+                                    font-weight: 600;
+                                    color: #495057;
+                                }
+                                
+                                HorizontalLayout {
+                                    spacing: 10px;
+                                    
+                                    Text { text: "最小:"; vertical-alignment: center; }
+                                    SpinBox {
+                                        value <=> root.min_file_size;
+                                        minimum: 0;
+                                        maximum: 1048576;
+                                        edited(value) => { root.filter_changed(); }
+                                    }
+                                    Text { text: "最大:"; vertical-alignment: center; }
+                                    SpinBox {
+                                        value <=> root.max_file_size;
+                                        minimum: 0;
+                                        maximum: 1048576;
+                                        edited(value) => { root.filter_changed(); }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // 正则表达式
+                        Rectangle {
+                            width: 100%;
+                            height: 100px;
+                            background: #ffffff;
+                            border-radius: 6px;
+                            
+                            VerticalLayout {
+                                padding: 10px;
+                                spacing: 8px;
+                                
+                                Text {
+                                    text: "正则表达式过滤";
+                                    font-weight: 600;
+                                    color: #495057;
+                                }
+                                
+                                HorizontalLayout {
+                                    spacing: 10px;
+                                      ComboBox {
+                                        model: ["文件名", "文件路径"];
+                                        current-index: root.regex_target;
+                                        selected(value) => {
+                                            debug("Selected regex target: " + value);
+                                            if (value == "文件名") { root.regex_target = 0; }
+                                            else { root.regex_target = 1; }
+                                            root.filter_changed();
+                                        }
+                                    }
+                                    
+                                    LineEdit {
+                                        text <=> root.regex_pattern;
+                                        placeholder-text: "输入正则表达式";
+                                        edited(text) => { root.filter_changed(); }
+                                    }
+                                }
+                            }
+                        }
+                          // 日期限制
+                        Rectangle {
+                            width: 100%;
+                            height: 160px;
+                            background: #ffffff;
+                            border-radius: 6px;
+                            
+                            VerticalLayout {
+                                padding: 10px;
+                                spacing: 8px;
+                                
+                                Text {
+                                    text: "最后修改日期限制";
+                                    font-weight: 600;
+                                    color: #495057;
+                                }                                
+                                date-change:= HorizontalLayout {
+                                    spacing: 10px;
+                                    
+                                    Text { text: "限制类型:"; vertical-alignment: center; }                                    
+                                    ComboBox {
+                                        model: ["无限制", "输入完整日期", "快速选择"];
+                                        current-index <=> root.date_ui_mode;
+                                        selected(index) => {
+                                            if (index == "无限制") {
+                                                root.date_ui_mode = 0;
+                                                root.date_limit_type = 0; // None - 重置为无限制
+                                                root.date_render_key += 1; // 强制重新渲染
+                                            } else if (index == "输入完整日期") {
+                                                root.date_ui_mode = 1;
+                                                root.date_limit_type = 4; // Specific - 输入完整日期
+                                                root.date_render_key += 1; // 强制重新渲染
+                                            } else if (index == "快速选择") {
+                                                root.date_ui_mode = 2;
+                                                // 快速选择模式时，先重置date_limit_type为0，等用户点击按钮
+                                                root.date_limit_type = 0;
+                                                root.date_render_key += 1; // 强制重新渲染
+                                            }
+                                            root.filter_changed();
+                                        }
+                                    }                                }
+                                
+                                // 动态日期输入区域 - 使用Rectangle的visible属性
+                                Rectangle {
+                                    width: 100%;
+                                    height: 40px;
+                                    visible: root.date_ui_mode != 0;
+                                    
+                                    // 输入完整日期模式
+                                    Rectangle {
+                                        width: 100%;
+                                        height: 100%;
+                                        visible: root.date_ui_mode == 1;
+                                        
+                                        HorizontalLayout {
+                                            spacing: 10px;
+                                            
+                                            Text { text: "日期:"; vertical-alignment: center; }
+                                            SpinBox {
+                                                value <=> root.specific_year;
+                                                minimum: 1970;
+                                                maximum: 2100;
+                                                edited(value) => { root.filter_changed(); }
+                                            }
+                                            Text { text: "年"; vertical-alignment: center; }
+                                            SpinBox {
+                                                value <=> root.specific_month;
+                                                minimum: 1;
+                                                maximum: 12;
+                                                edited(value) => { root.filter_changed(); }
+                                            }
+                                            Text { text: "月"; vertical-alignment: center; }
+                                            SpinBox {
+                                                value <=> root.specific_day;
+                                                minimum: 1;
+                                                maximum: 31;
+                                                edited(value) => { root.filter_changed(); }
+                                            }
+                                            Text { text: "日"; vertical-alignment: center; }
+                                        }
+                                    }
+                                    
+                                    // 快速选择模式
+                                    Rectangle {
+                                        width: 100%;
+                                        height: 100%;
+                                        visible: root.date_ui_mode == 2;
+                                        
+                                        HorizontalLayout {
+                                            spacing: 10px;
+                                            alignment: start;
+                                            
+                                            Button {
+                                                text: "1天内";
+                                                clicked => {
+                                                    root.date_limit_type = 1; // Days
+                                                    root.date_limit_value = 1;
+                                                    root.filter_changed();
+                                                }
+                                            }
+                                            
+                                            Button {
+                                                text: "1周内";
+                                                clicked => {
+                                                    root.date_limit_type = 2; // Weeks
+                                                    root.date_limit_value = 1;
+                                                    root.filter_changed();
+                                                }
+                                            }
+                                            
+                                            Button {
+                                                text: "1年内";
+                                                clicked => {
+                                                    root.date_limit_type = 3; // Years
+                                                    root.date_limit_value = 1;
+                                                    root.filter_changed();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }// 显示当前选择的日期限制
+                                if root.date_limit_type != 0: Text {
+                                    text: root.date_limit_type == 1 ? "已选择: 1天内" :
+                                          root.date_limit_type == 2 ? "已选择: 1周内" :
+                                          root.date_limit_type == 3 ? "已选择: 1年内" :
+                                          root.date_limit_type == 4 ? "已选择: 具体日期 " + root.specific_year + "年" + root.specific_month + "月" + root.specific_day + "日" : 
+                                          "请选择日期限制";
+                                    font-size: 12px;
+                                    color: #6c757d;
+                                }
+                            }
+                        }
+                        
+                        // 其他选项
+                        Rectangle {
+                            width: 100%;
+                            height: 60px;
+                            background: #ffffff;
+                            border-radius: 6px;
+                            
+                            VerticalLayout {
+                                padding: 10px;
+                                spacing: 8px;
+                                
+                                CheckBox {
+                                    text: "记录文件哈希值(用于重复文件检测)";
+                                    checked <=> root.record_hash;
+                                    toggled => { root.filter_changed(); }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 底部按钮
+            HorizontalLayout {
+                spacing: 10px;
+                alignment: end;
+                  Button {
+                    text: "重置默认值";                    clicked => {
+                        root.search_hidden_files = true;
+                        root.search_hidden_folders = true;
+                        root.search_readonly_files = true;
+                        root.min_file_size = 0;
+                        root.max_file_size = 65536;
+                        root.date_limit_type = 0;
+                        root.date_ui_mode = 0; // 重置UI模式
+                        root.date_limit_value = 1;
+                        root.specific_year = 2025;
+                        root.specific_month = 6;
+                        root.specific_day = 22;
+                        root.regex_pattern = "";
+                        root.regex_target = 0;
+                        root.record_hash = false;
+                        root.date_render_key += 1; // 强制重新渲染
+                        
+                        root.reset_to_defaults();
+                        root.filter_changed();}
+            }
+        }
+    }
+}
+    }
+}

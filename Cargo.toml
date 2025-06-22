@@ -1,0 +1,24 @@
+[package]
+name = "ExtendedSearch"
+version = "0.1.0"
+edition = "2024"
+
+# Windows配置 - 隐藏控制台窗口
+[[bin]]
+name = "ExtendedSearch"
+path = "src/main.rs"
+
+[dependencies]
+slint = "1.12.0"
+native-dialog = "0.6"
+regex = "1.10"
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10.9"
+serde = "1.0.219"
+serde_json = "1.0.140"
+
+[build-dependencies]
+slint-build = "1.12.0"
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"

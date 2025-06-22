@@ -1,0 +1,45 @@
+// 自定义按钮组件
+export component CustomButton {
+    in property<string> text;
+    in property<bool> selected: false;
+    callback clicked;
+    
+    min-height: 40px;
+    max-height: 40px;
+    preferred-height: 40px;
+    
+    Rectangle {
+        height: 100%;
+        width: 100%;
+        background: root.selected ? #3264c8 : #e0e0e0;
+        border-radius: 4px;
+        border-width: 1px;
+        border-color: root.selected ? #2850a0 : #ccc;
+        
+        Text {
+            text: root.text;
+            color: root.selected ? white : black;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            font-weight: 500;
+            font-size: 14px;
+            font-family: "Microsoft YaHei";
+        }
+        
+        touch := TouchArea {
+            clicked => { 
+                root.clicked();
+            }
+            mouse-cursor: pointer;
+        }
+        
+        states [
+            hover when touch.has-hover: {
+                background: root.selected ? #4674d8 : #f0f0f0;
+            }
+            pressed when touch.pressed: {
+                background: root.selected ? #2850a0 : #d0d0d0;
+            }
+        ]
+    }
+}
