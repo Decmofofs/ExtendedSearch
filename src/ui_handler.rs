@@ -992,122 +992,114 @@ impl UIHandler {    /// 创建新的UI处理器
         let ui_weak = self.ui.as_weak();
         let search_results = self.search_results.inner.clone();
         let remove_duplicates_callback = move || {
-            if let Some(ui) = ui_weak.upgrade() {
+            if let Some(updated_ui) = ui_weak.upgrade() {
                 // 获取搜索结果
-                let mut files = Vec::new();
-                for i in 0..search_results.row_count() {
-                    if let Some(file_info) = search_results.row_data(i) {
-                        files.push(SingleFileInformations {
-                            path: PathBuf::from(file_info.path.as_str()),
-                            name: file_info.name.as_str().to_string(),
-                            size: file_info.size as u64,
-                            time: file_info.time as u64,
-                            hash: file_info.hash.as_str().to_string(),
-                        });
-                    }
+            let mut files = Vec::new();
+            for i in 0..search_results.row_count() {
+                if let Some(file_info) = search_results.row_data(i) {
+                    files.push(SingleFileInformations {
+                        path: PathBuf::from(file_info.path.as_str()),
+                        name: file_info.name.as_str().to_string(),
+                        size: file_info.size as u64,
+                        time: file_info.time as u64,
+                        hash: file_info.hash.as_str().to_string(),
+                    });
                 }
-                
-                if files.is_empty() {
-                    MessageDialog::new()
-                        .set_type(MessageType::Info)
-                        .set_title("提示")
-                        .set_text("没有搜索结果可以进行去重！")
-                        .show_alert()
-                        .unwrap();
-                    return;
-                }
-                
-                if files[0].hash.is_empty() {
-                    MessageDialog::new()
-                        .set_type(MessageType::Info)
-                        .set_title("提示")
-                        .set_text("搜索结果中没有哈希值，请在过滤设置中启用'记录哈希值'选项！")
-                        .show_alert()
-                        .unwrap();
-                    return;
-                }
-                
-                // MessageDialog::new()
-                //     .set_type(MessageType::Info)
-                //     .set_title("提示")
-                //     .set_text("正在进行去重处理，请稍候...")
-                //     .show_alert()
-                //     .unwrap();
-
-                // 去重处理 - 使用SearchHelper
-                let original_count = files.len();
-                crate::search_file::unique_files(&mut files);
-                let unique_count = files.len();
-
-                // 打印去重结果
-                println!("去重前文件数量: {}", original_count);
-                println!("去重后文件数量: {}", unique_count);
-                for file in &files {
-                    println!("保留文件: {} - SHA256:{}", file.name, file.hash);
-                }
-                
-                if original_count == unique_count {
-                    MessageDialog::new()
-                        .set_type(MessageType::Info)
-                        .set_title("去重结果")
-                        .set_text("没有重复文件，去重操作未做任何改变。")
-                        .show_alert()
-                        .unwrap();
-                    return;
-                }
-
-                // // 更新搜索结果
-                
-                while search_results.row_count() > 0 {
-                    search_results.remove(search_results.row_count() as usize - 1);
-                }
-
-                println!("清空之前的搜索结果");
-
-                // while search_results.row_count() > 0 {
-                //     search_results.remove(0);
-                // }
-                let mut file_infos = Vec::new();
-                for file in &files {
-                    let file_info = FileInfo {
-                        path: file.path.to_string_lossy().to_string().into(),
-                        name: file.name.clone().into(),
-                        size: file.size as i32,
-                        time: file.time as i32,
-                        hash: file.hash.clone().into(),
-                        selected: false, // 默认不选中
-                    };
-                    search_results.push(file_info.clone());
-                    file_infos.push(file_info);
-                }
-
-                // 显示转化为Vec<FileInfo>后的结果
-                println!("转换为Vec后，搜索结果数量: {}", file_infos.len());
-                
-                // 创建UI的弱引用
-                let ui_weak = ui.as_weak();
-                
-                // 使用静态方法，将结果转换为一个简单的Vec<FileInfo>
-                let cloned_files = file_infos.clone();
-                
-                // 在主线程中异步调用UI更新逻辑
-                slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = ui_weak.upgrade() {
-                        // 创建一个新的VecModel并设置到UI中
-                        ui.set_search_results(slint::VecModel::from_slice(&cloned_files));
-                    }
-                }).expect("无法在事件循环中调用");
-                
+            }
+            
+            if files.is_empty() {
                 MessageDialog::new()
                     .set_type(MessageType::Info)
-                    .set_title("去重完成")
-                    .set_text(&format!("原有 {} 个文件，去重后剩余 {} 个文件", original_count, unique_count))
+                    .set_title("提示")
+                    .set_text("没有搜索结果可以进行去重！")
                     .show_alert()
                     .unwrap();
+                return;
+            }
+            
+            if files[0].hash.is_empty() {
+                MessageDialog::new()
+                    .set_type(MessageType::Info)
+                    .set_title("提示")
+                    .set_text("搜索结果中没有哈希值，请在过滤设置中启用'记录哈希值'选项！")
+                    .show_alert()
+                    .unwrap();
+                return;
+            }
+            
+            // MessageDialog::new()
+            //     .set_type(MessageType::Info)
+            //     .set_title("提示")
+            //     .set_text("正在进行去重处理，请稍候...")
+            //     .show_alert()
+            //     .unwrap();
+
+            // 去重处理 - 使用SearchHelper
+            let original_count = files.len();
+            crate::search_file::unique_files(&mut files);
+            let unique_count = files.len();
+
+            // 打印去重结果
+            println!("去重前文件数量: {}", original_count);
+            println!("去重后文件数量: {}", unique_count);
+            for file in &files {
+                println!("保留文件: {} - SHA256:{}", file.name, file.hash);
+            }
+            
+            if original_count == unique_count {
+                MessageDialog::new()
+                    .set_type(MessageType::Info)
+                    .set_title("去重结果")
+                    .set_text("没有重复文件，去重操作未做任何改变。")
+                    .show_alert()
+                    .unwrap();
+                return;
+            }
+
+            // // 更新搜索结果
+            
+            while search_results.row_count() > 0 {
+                search_results.remove(search_results.row_count() as usize - 1);
+            }
+
+            println!("清空之前的搜索结果");
+
+            // while search_results.row_count() > 0 {
+            //     search_results.remove(0);
+            // }
+            let mut file_infos = Vec::new();
+            for file in &files {
+                let file_info = FileInfo {
+                    path: file.path.to_string_lossy().to_string().into(),
+                    name: file.name.clone().into(),
+                    size: file.size as i32,
+                    time: file.time as i32,
+                    hash: file.hash.clone().into(),
+                    selected: false, // 默认不选中
+                };
+                search_results.push(file_info.clone());
+                file_infos.push(file_info);
+            }
+
+            // 显示转化为Vec<FileInfo>后的结果
+            println!("转换为Vec后，搜索结果数量: {}", file_infos.len());
+            
+            // 使用已有的UI引用设置搜索结果
+            updated_ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+            
+            MessageDialog::new()
+                .set_type(MessageType::Info)
+                .set_title("去重完成")
+                .set_text(&format!("原有 {} 个文件，去重后剩余 {} 个文件", original_count, unique_count))
+                .show_alert()
+                .unwrap();
             }
         };
         
-        // 7. 打开文件夹回调
+        // 7. 排序按钮回调
+
+        
+        // 8. 打开文件夹回调
         let open_folder_callback = move |path: SharedString| {
             let path_str = path.as_str();
             let path_obj = PathBuf::from(path_str);
@@ -1342,6 +1334,92 @@ impl UIHandler {    /// 创建新的UI处理器
             }
         };
 
+        // 7. 排序功能回调
+        let ui_weak = self.ui.as_weak();
+        let search_results = self.search_results.inner.clone();
+        let sort_results_callback = move |sort_type: SharedString, reversed: bool| {
+            if let Some(ui) = ui_weak.upgrade() {
+                // 获取搜索结果
+                let mut files = Vec::new();
+                for i in 0..search_results.row_count() {
+                    if let Some(file_info) = search_results.row_data(i) {
+                        files.push(SingleFileInformations {
+                            path: PathBuf::from(file_info.path.as_str()),
+                            name: file_info.name.as_str().to_string(),
+                            size: file_info.size as u64,
+                            time: file_info.time as u64,
+                            hash: file_info.hash.as_str().to_string(),
+                        });
+                    }
+                }
+                
+                if files.is_empty() {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
+                        .set_title("提示")
+                        .set_text("没有搜索结果可以进行排序！")
+                        .show_alert()
+                        .unwrap();
+                    return;
+                }
+                
+                // 获取排序类型和方向
+                let sort_type_str = sort_type.as_str();
+                println!("开始排序，排序方式: {}, 方向: {}", sort_type_str, if reversed {"从大到小"} else {"从小到大"});
+                
+                // 执行排序操作
+                SearchHelper::sort_results(&mut files, sort_type_str, reversed);
+                
+                // 清空现有的搜索结果
+                while search_results.row_count() > 0 {
+                    search_results.remove(search_results.row_count() as usize - 1);
+                }
+                
+                println!("清空之前的搜索结果，准备更新排序后的结果");
+                
+                // 创建新的搜索结果
+                let mut file_infos = Vec::new();
+                for file in &files {
+                    let file_info = FileInfo {
+                        path: file.path.to_string_lossy().to_string().into(),
+                        name: file.name.clone().into(),
+                        size: file.size as i32,
+                        time: file.time as i32,
+                        hash: file.hash.clone().into(),
+                        selected: false, // 默认不选中
+                    };
+                    search_results.push(file_info.clone());
+                    file_infos.push(file_info);
+                }
+                
+                println!("转换为Vec后，搜索结果数量: {}", file_infos.len());
+                
+                // 更新UI
+                ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+                
+                MessageDialog::new()
+                    .set_type(MessageType::Info)
+                    .set_title("排序完成")
+                    .set_text(&format!("已按{}{}排序 {} 个文件", 
+                        match sort_type_str {
+                            "name" => "文件名",
+                            "size" => "文件大小",
+                            "time" => "修改日期",
+                            "path" => "文件路径",
+                            _ => "未知方式",
+                        },
+                        if reversed {
+                            "从大到小"
+                        } else {
+                            "从小到大"
+                        },
+                        files.len()
+                    ))
+                    .show_alert()
+                    .unwrap();
+            }
+        };
+
         // 通过全局接口暴露回调
         self.ui.on_handle_search_clicked(search_callback);
         self.ui.on_handle_import_results(import_callback);
@@ -1354,6 +1432,7 @@ impl UIHandler {    /// 创建新的UI处理器
         self.ui.on_handle_map_files(map_files_callback);
         self.ui.on_handle_remove_duplicates(remove_duplicates_callback);
         self.ui.on_handle_open_folder(open_folder_callback);
+        self.ui.on_handle_sort_results(sort_results_callback);
         self.ui.on_item_selected_changed(item_selected_changed);
         self.ui.on_select_all(select_all);
           // 设置初始数据绑定

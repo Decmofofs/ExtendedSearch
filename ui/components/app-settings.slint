@@ -64,7 +64,7 @@ export component AppSettings {
                     
                     clicked => {
                         root.sort_type = ["path", "name", "size", "time"][index];
-                        root.sort_results(root.sort_type, root.sort_reversed);
+                        // 不再直接调用排序，只改变设置
                     }
                 }
             }
@@ -103,7 +103,7 @@ export component AppSettings {
                     
                     clicked => {
                         root.sort_reversed = [false, true][index];
-                        root.sort_results(root.sort_type, root.sort_reversed);
+                        // 不再直接调用排序，只改变设置
                     }
                 }
             }
