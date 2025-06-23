@@ -1046,10 +1046,27 @@ impl UIHandler {    /// 创建新的UI处理器
                     println!("保留文件: {} - SHA256:{}", file.name, file.hash);
                 }
                 
-                // // 更新搜索结果
-                while search_results.row_count() > 0 {
-                    search_results.remove(0);
+                if original_count == unique_count {
+                    MessageDialog::new()
+                        .set_type(MessageType::Info)
+                        .set_title("去重结果")
+                        .set_text("没有重复文件，去重操作未做任何改变。")
+                        .show_alert()
+                        .unwrap();
+                    return;
                 }
+
+                // // 更新搜索结果
+                
+                while search_results.row_count() > 0 {
+                    search_results.remove(search_results.row_count() as usize - 1);
+                }
+
+                println!("清空之前的搜索结果");
+
+                // while search_results.row_count() > 0 {
+                //     search_results.remove(0);
+                // }
                 let mut file_infos = Vec::new();
                 for file in &files {
                     let file_info = FileInfo {
@@ -1063,9 +1080,23 @@ impl UIHandler {    /// 创建新的UI处理器
                     search_results.push(file_info.clone());
                     file_infos.push(file_info);
                 }
+
+                // 显示转化为Vec<FileInfo>后的结果
+                println!("转换为Vec后，搜索结果数量: {}", file_infos.len());
                 
-                // 使用from_slice方法直接更新UI中的搜索结果
-                ui.set_search_results(slint::VecModel::from_slice(&file_infos));
+                // 创建UI的弱引用
+                let ui_weak = ui.as_weak();
+                
+                // 使用静态方法，将结果转换为一个简单的Vec<FileInfo>
+                let cloned_files = file_infos.clone();
+                
+                // 在主线程中异步调用UI更新逻辑
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_weak.upgrade() {
+                        // 创建一个新的VecModel并设置到UI中
+                        ui.set_search_results(slint::VecModel::from_slice(&cloned_files));
+                    }
+                }).expect("无法在事件循环中调用");
                 
                 MessageDialog::new()
                     .set_type(MessageType::Info)
