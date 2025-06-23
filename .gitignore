@@ -1,1 +1,45 @@
-/target
+# Rust 构建输出
+/target/
+target/
+
+# IDE 和编辑器文件
+.vscode/
+.VSCodeCounter/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+
+# Rust 特定文件
+Cargo.lock
+**/*.rs.bk
+
+# 构建工具生成的文件
+*.exe
+*.pdb
+*.dll
+*.so
+*.dylib
+
+# 调试信息
+*.dSYM/
+
+# 本地配置文件
+.env
+.env.local
