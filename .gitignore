@@ -27,7 +27,7 @@ Thumbs.db
 *.bak
 
 # Rust 特定文件
-Cargo.lock
+
 **/*.rs.bk
 
 # 构建工具生成的文件

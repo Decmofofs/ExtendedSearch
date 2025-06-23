@@ -1,8 +1,0 @@
-"filename", "language", "Slint", "Rust", "comment", "blank", "total"
-"d:\WorkSpace\RSProject\ExtendedSearch\src\search_file\mod.rs", "Rust", 0, 2, 1, -1, 2
-"d:\WorkSpace\RSProject\ExtendedSearch\src\ui_handler.rs", "Rust", 0, 72, 32, 9, 113
-"d:\WorkSpace\RSProject\ExtendedSearch\ui\app-window.slint", "Slint", 4, 0, 0, 0, 4
-"d:\WorkSpace\RSProject\ExtendedSearch\ui\components\app-settings.slint", "Slint", 94, 0, 7, 31, 132
-"d:\WorkSpace\RSProject\ExtendedSearch\ui\components\content-area.slint", "Slint", 7, 0, 1, 3, 11
-"d:\WorkSpace\RSProject\ExtendedSearch\ui\components\search-page.slint", "Slint", 7, 0, 1, 1, 9
-"Total", "-", 112, 74, 42, 43, 271
