@@ -23,6 +23,7 @@ export component AppWindow inherits Window {
     callback handle_search_clicked();
     callback handle_import_results();
     callback handle_export_results();
+    callback handle_show_tree_view(); // 新增树状显示回调
     callback handle_select_folder();
     callback handle_move_selected_files(); // 新增移动选中文件回调
     callback handle_copy_selected_files(); // 新增复制选中文件回调
@@ -30,6 +31,7 @@ export component AppWindow inherits Window {
     callback handle_map_files();
     callback handle_remove_duplicates();
     callback handle_open_folder(string);
+    callback handle_sort_results(string, bool); // 新增排序回调
     
     // 搜索结果项选择回调
     callback item_selected_changed(int, bool);
@@ -60,12 +62,14 @@ export component AppWindow inherits Window {
             search_clicked => { root.handle_search_clicked(); }
             import_results => { root.handle_import_results(); }
             export_results => { root.handle_export_results(); }
+            show_tree_view => { root.handle_show_tree_view(); } // 新增树状显示回调映射
             select_folder => { root.handle_select_folder(); }
             move_selected_files => { root.handle_move_selected_files(); } // 新增移动选中文件回调映射
             copy_selected_files => { root.handle_copy_selected_files(); } // 新增复制选中文件回调映射
             delete_selected_files => { root.handle_delete_selected_files(); }
             map_files => { root.handle_map_files(); }
             remove_duplicates => { root.handle_remove_duplicates(); }            open_folder(path) => { root.handle_open_folder(path); }
+            sort_results(sort_type, sort_reversed) => { root.handle_sort_results(sort_type, sort_reversed); } // 新增排序回调映射
             
             // 搜索结果选择回调
             item_selected_changed(index, selected) => { root.item_selected_changed(index, selected); }

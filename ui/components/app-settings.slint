@@ -1,0 +1,131 @@
+import { CustomButton } from "custom-button.slint";
+
+export component AppSettings {
+    // 排序相关回调
+    callback sort_results(string, bool);
+    
+    // 排序方式选择
+    property<string> sort_type: "path";
+    // 排序方向选择
+    property<bool> sort_reversed: false;
+    
+    width: 60%;
+   
+        // 排序方式选择区域
+        VerticalLayout {
+            width: 100%;
+            
+            
+            spacing: 10px;
+
+                    // 标题
+            Text {
+                height: 30px;
+                text: "搜索结果排序设置";
+                font-size: 20px;
+                font-weight: 600;
+                horizontal-alignment: center;
+            }
+
+
+            Text {
+                height: 20px;
+                text: "排序方式:";
+                font-size: 16px;
+                horizontal-alignment: left;
+            }
+            
+            HorizontalLayout {
+                spacing: 10px;
+                width: 100%;
+                
+                for option[index] in ["路径", "名称", "文件大小", "修改日期"]: TouchArea {
+                    
+                    Rectangle {
+                        
+                        height: 36px;
+                        border-radius: 4px;
+                        background: (root.sort_type == ["path", "name", "size", "time"][index]) 
+                            ? #3498db 
+                            : #ecf0f1;
+                        border-width: 1px;
+                        border-color: #bdc3c7;
+                        
+                        Text {
+                            text: option;
+                            color: (root.sort_type == ["path", "name", "size", "time"][index])
+                                ? white
+                                : black;
+                            font-size: 14px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                    
+                    clicked => {
+                        root.sort_type = ["path", "name", "size", "time"][index];
+                        root.sort_results(root.sort_type, root.sort_reversed);
+                    }
+                }
+            }
+
+            Text {
+                height: 20px;
+                text: "排序方向:";
+                font-size: 16px;
+            }
+
+            HorizontalLayout {
+                spacing: 10px;
+                width: 100%;
+                
+                for option[index] in ["从小到大", "从大到小"]: TouchArea {
+                    Rectangle {
+                        
+                        height: 36px;
+                        border-radius: 4px;
+                        background: (root.sort_reversed == [false, true][index]) 
+                            ? #3498db 
+                            : #ecf0f1;
+                        border-width: 1px;
+                        border-color: #bdc3c7;
+                        
+                        Text {
+                            text: option;
+                            color: (root.sort_reversed == [false, true][index])
+                                ? white
+                                : black;
+                            font-size: 14px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                    
+                    clicked => {
+                        root.sort_reversed = [false, true][index];
+                        root.sort_results(root.sort_type, root.sort_reversed);
+                    }
+                }
+            }
+
+            Rectangle {
+                height:100px;// 占位符
+            }
+            // 应用按钮
+            CustomButton {
+                //x: parent.width * 0.35;
+                text: "应用排序";
+                
+                clicked => {
+                    root.sort_results(root.sort_type, root.sort_reversed);
+                }
+            }
+
+
+        }
+        
+
+        
+
+    
+}

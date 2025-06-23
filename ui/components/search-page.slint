@@ -10,6 +10,7 @@ export component SearchPage {
     callback search_clicked();
     callback import_results();
     callback export_results();
+    callback show_tree_view(); // 新增树状显示回调
     callback select_folder();
     callback move_selected_files(); // 新增移动选中文件回调
     callback copy_selected_files(); // 新增复制选中文件回调
@@ -83,6 +84,14 @@ export component SearchPage {
                     text: "导出结果";
                     clicked => {
                         root.export_results();
+                    }
+                }
+                
+                // 树状显示按钮
+                CustomButton {
+                    text: "树状显示";
+                    clicked => {
+                        root.show_tree_view();
                     }
                 }
                 

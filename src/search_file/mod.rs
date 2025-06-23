@@ -1,4 +1,3 @@
-
 use std::arch::global_asm;
 use std::os::windows::fs::MetadataExt;
 use std::string::String;
@@ -20,9 +19,11 @@ use std::time::Duration;
 use std::time::UNIX_EPOCH;
 use serde::Serialize;
 use serde::Deserialize;
+use trash;
 
 
 pub mod settings;
+pub mod build_tree;
 
 #[derive(Serialize, Deserialize)]
 pub struct SingleFileInformations {
@@ -232,7 +233,7 @@ pub fn sort_files(files: &mut Vec<SingleFileInformations>, sort_type: String, re
 
 // This function removes duplicate files based on their hash.
 // It sorts the files by hash and then removes duplicates.
-// 整体代码中的行为:若选择使用SHA256哈希值来去重,则在get_files后调用此函数作为新的Vec
+// 整体代码中的行为:若选择使用SHA256哈希值来去重,則在get_files後調用此函數作為新的Vec
 pub fn unique_files(files: &mut Vec<SingleFileInformations>) {
     if files.is_empty() || files[0].hash.is_empty() {
         return;
@@ -276,7 +277,8 @@ pub fn move_files(files: &[SingleFileInformations], destination: &PathBuf) -> io
 // 行为: 删除，后略
 pub fn delete_files(files: &[SingleFileInformations]) -> io::Result<()> {
     for file in files {
-        fs::remove_file(&file.path)?;
+        // fs::remove_file(&file.path)?;
+        trash::delete(&file.path).expect("Failed to delete file");
     }
     Ok(())
 }
