@@ -12,7 +12,7 @@
 </div>
 
 ## 说明
-本项目当前为北京大学2024-2025秋季学期"Rust程序设计"课程的学生结课项目，小组成员为[LSZ2005](https://github.com/LSZ2005)， [Decmofofs](https://github.com/Decmofofs). 当前功能较为简陋，以后或许会再行完善。
+本项目当前为北京大学2024-2025春季学期"Rust程序设计"课程的学生结课项目，小组成员为[LSZ2005](https://github.com/LSZ2005)， [Decmofofs](https://github.com/Decmofofs). 当前功能较为简陋，以后或许会再行完善。
 
 此README文档基于 `Claude sonnet 4`生成。
 
